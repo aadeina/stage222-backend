@@ -1,19 +1,57 @@
-# Python
+# 💼 Python
 __pycache__/
 *.py[cod]
-*.env
+*.egg
+*.egg-info/
+*.log
 
-# Django
-/media/
-*.sqlite3
-
-# Envs
-env/
+# 🔐 Envs & Secrets
+.env
+.env.*
+*.secret
+*.key
 venv/
+env/
+ENV/
 
-# IDE
+# 🧪 Testing
+htmlcov/
+.coverage
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+.pytest_cache/
+
+# 🧠 Django
+db.sqlite3
+*.sqlite3
+media/
+staticfiles/
+*.pot
+*.mo
+
+# 🧰 IDEs
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
 
-# Static
-static/
+# 🚀 Deployment
+*.pem
+*.bak
+.DS_Store
+Thumbs.db
+
+# 🧪 Migrations (optional: if you generate fresh on deploy)
+# */migrations/
+# !*/migrations/__init__.py
+
+# 📂 Generated Docs or Build
+build/
+dist/
+docs/_build/
+
+# 🚧 System files
+*.swp
+*.tmp
