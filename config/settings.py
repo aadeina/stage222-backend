@@ -3,15 +3,23 @@ from pathlib import Path
 from decouple import config, Csv
 from datetime import timedelta
 
+# Base Directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ======================
 # SECURITY
+# ======================
+
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
 
-# Applications
+# ======================
+# APPLICATIONS
+# ======================
+
 INSTALLED_APPS = [
+    # Django default apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -19,7 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Third-party
+    # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -31,9 +39,13 @@ INSTALLED_APPS = [
     'organizations',
     'internships',
     'applications',
-    'messages',
+    'messaging',  # Renamed to avoid conflict with Django's built-in messages
     'skills',
 ]
+
+# ======================
+# MIDDLEWARE
+# ======================
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -45,6 +57,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# ======================
+# URL & WSGI / ASGI
+# ======================
 
 ROOT_URLCONF = 'config.urls'
 
@@ -66,7 +82,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
-# Database
+# ======================
+# DATABASE
+# ======================
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -78,7 +97,10 @@ DATABASES = {
     }
 }
 
-# JWT Auth
+# ======================
+# REST FRAMEWORK & JWT
+# ======================
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -91,24 +113,39 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# Auth model
+# ======================
+# CUSTOM USER MODEL
+# ======================
+
 AUTH_USER_MODEL = 'accounts.User'
 
-# Internationalization
+# ======================
+# INTERNATIONALIZATION
+# ======================
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Africa/Nouakchott'
 USE_I18N = True
 USE_TZ = True
 
-# Static / Media
+# ======================
+# STATIC & MEDIA FILES
+# ======================
+
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Default PK type
+# ======================
+# DEFAULT PRIMARY KEY TYPE
+# ======================
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS
-CORS_ALLOW_ALL_ORIGINS = True  # Dev only! Lock later
+# ======================
+# CORS SETTINGS
+# ======================
+
+CORS_ALLOW_ALL_ORIGINS = True  # ⚠️ Dev only! Restrict this in production.
