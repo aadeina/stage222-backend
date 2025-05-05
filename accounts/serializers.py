@@ -56,3 +56,11 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 class ResendEmailVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+class PasswordResetSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True, min_length=8)
