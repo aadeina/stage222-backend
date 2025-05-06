@@ -1,13 +1,11 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from .models import User
+from .models import User, Admin
 
+# ✅ User Registration
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(
-        write_only=True,
-        validators=[validate_password]
-    )
+    password = serializers.CharField(write_only=True, validators=[validate_password])
 
     class Meta:
         model = User
@@ -16,6 +14,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
 
+# 🔐 Login
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
@@ -28,19 +27,17 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Account disabled.")
         return {'user': user}
 
-
+# 👤 User Profile
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'email', 'role', 'is_verified', 'created_at']
         read_only_fields = ['id', 'email', 'role', 'created_at']
 
+# 🔐 Change Password
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True)
-    new_password = serializers.CharField(
-        write_only=True,
-        validators=[validate_password]
-    )
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
 
     def validate_old_password(self, value):
         user = self.context['request'].user
@@ -54,6 +51,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.save()
         return user
 
+# 🔁 Email Verification & Reset
 class ResendEmailVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -64,3 +62,15 @@ class PasswordResetSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()
     new_password = serializers.CharField(write_only=True, min_length=8)
+
+# 🧑‍🎓 Candidate Profile (in candidates app)
+# import this class in candidates/serializers.py to keep accounts clean
+
+# 🧑‍💼 Recruiter Profile (in recruiters app)
+# import this class in recruiters/serializers.py to keep accounts clean
+
+# 🧑‍💼 Admin (optional admin user control)
+class AdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Admin
+        exclude = ['user']

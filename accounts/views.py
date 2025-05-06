@@ -1,11 +1,9 @@
 from django.contrib.auth.tokens import PasswordResetTokenGenerator, default_token_generator
-from django.urls import reverse
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.exceptions import ObjectDoesNotExist
-
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -23,9 +21,7 @@ from accounts.serializers import (
     PasswordResetRequestSerializer, 
     PasswordResetSerializer           
 )
-
 from core.ratelimits import limit_login, limit_register, limit_change_password, limit_password_reset, limit_password_reset_request
-
 
 token_generator = PasswordResetTokenGenerator()
 
@@ -185,6 +181,7 @@ class PasswordResetRequestView(APIView):
             pass  # Don't reveal existence of email
 
         return Response({"detail": "If the email is valid, a reset link has been sent."})
+
 @limit_password_reset()
 class PasswordResetView(APIView):
     permission_classes = [AllowAny]

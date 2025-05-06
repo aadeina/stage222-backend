@@ -25,3 +25,22 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+class Admin(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, limit_choices_to={'role': 'admin'})
+    name = models.CharField(max_length=150)
+    email = models.EmailField()
+
+    def __str__(self):
+        return self.name
+
+
+class Organization(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    website = models.URLField(blank=True, null=True)
+    logo = models.ImageField(upload_to='organization_logos/', blank=True, null=True)
+    industry = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name

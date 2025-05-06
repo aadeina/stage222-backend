@@ -9,7 +9,7 @@ from .views import (
     LogoutView,
     VerifyEmailView,
     ResendEmailVerificationView,
-    PasswordResetRequestView, 
+    PasswordResetRequestView,
     PasswordResetView,
 )
 
@@ -19,11 +19,9 @@ urlpatterns = [
     path('profile/', ProfileView.as_view(), name='profile'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
     path('resend-verification/', ResendEmailVerificationView.as_view(), name='resend-verification'),
     path('request-password-reset/', PasswordResetRequestView.as_view(), name='request-password-reset'),
     path('reset-password/', PasswordResetView.as_view(), name='reset-password'),
-
-    # 🔄 Token Refresh Endpoint
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
