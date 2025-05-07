@@ -5,11 +5,17 @@ from .models import RecruiterProfile
 class RecruiterSerializer(serializers.ModelSerializer):
     class Meta:
         model = RecruiterProfile
-        exclude = ['user']
-        read_only_fields = ['is_verified']
+        exclude = ['user']  # still excluded from POST/PATCH input
+        read_only_fields = ['is_verified']  # only admin can toggle verification
 
     def validate_phone(self, value):
+        """
+        Validate Mauritanian recruiter phone numbers starting with:
+        +2222 (Chinguitel), +2223 (Mattel), +2224 (Mauritel)
+        """
         pattern = r'^\+222(2|3|4)\d{7}$'
         if not re.match(pattern, value):
-            raise serializers.ValidationError("Phone must be a valid Mauritanian number starting with +2222, +2223, or +2224.")
+            raise serializers.ValidationError(
+                "Phone must be a valid Mauritanian number starting with +2222, +2223, or +2224 and followed by 7 digits."
+            )
         return value

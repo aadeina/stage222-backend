@@ -5,8 +5,7 @@ from .serializers import InternshipSerializer
 from accounts.permissions import IsRecruiter, IsCandidate
 from applications.models import Application
 from applications.serializers import ApplicationSerializer
-
-
+from django.shortcuts import get_object_or_404
 
 # ✅ Create Internship (Recruiter only)
 class InternshipCreateView(generics.CreateAPIView):
@@ -42,17 +41,23 @@ class InternshipDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response(
-            {"detail": "Internship deleted successfully."},
+            {"detail": "✅ Internship deleted successfully."},
             status=status.HTTP_200_OK
         )
 
 
 # ✅ Apply to Internship (Candidate only)
+from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
+
 class ApplyToInternshipView(generics.CreateAPIView):
     serializer_class = ApplicationSerializer
     permission_classes = [permissions.IsAuthenticated, IsCandidate]
 
     def perform_create(self, serializer):
-        internship_id = self.kwargs.get("id")
-        candidate = self.request.user.candidate
-        serializer.save(candidate=candidate, internship_id=internship_id)
+        try:
+            internship = get_object_or_404(Internship, id=self.kwargs["id"])
+            candidate = self.request.user.candidate
+            serializer.save(candidate=candidate, internship=internship)
+        except Exception as e:
+            raise ValidationError({"detail": f"❌ Application failed: {str(e)}"})

@@ -1,7 +1,7 @@
+import uuid
 from django.db import models
-from accounts.models import User
-from internships.models import Internship
 from candidates.models import CandidateProfile
+from internships.models import Internship
 
 class Application(models.Model):
     STATUS_CHOICES = [
@@ -10,15 +10,17 @@ class Application(models.Model):
         ('rejected', 'Rejected'),
     ]
 
-    candidate = models.ForeignKey(CandidateProfile, on_delete=models.CASCADE)
-    internship = models.ForeignKey(Internship, on_delete=models.CASCADE)
-    cover_letter = models.TextField()
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    candidate = models.ForeignKey(CandidateProfile, on_delete=models.CASCADE, related_name='applications')
+    internship = models.ForeignKey(Internship, on_delete=models.CASCADE, related_name='applications')
+    cover_letter = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    shortlisted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    is_shortlisted = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ('candidate', 'internship')  # Prevent duplicate applications
+        unique_together = ['candidate', 'internship']
+        ordering = ['-created_at']  # Optional: newest applications first
 
     def __str__(self):
-        return f"{self.candidate} - {self.internship.title}"
+        return f"{self.candidate.user.email} → {self.internship.title}"
