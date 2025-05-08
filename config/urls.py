@@ -14,6 +14,7 @@ urlpatterns = [
     path('api/internships/', include('internships.urls')),
     path('api/applications/', include('applications.urls')),
     path('api/messages/', include('messaging.urls')),
+    path('api/bookmarks/', include('bookmarks.urls')),
 
 
 ]
