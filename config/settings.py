@@ -81,7 +81,7 @@ INSTALLED_APPS = [
     'internships',
     'applications',
     'messaging',  # Renamed to avoid conflict with Django's built-in messages
-    'skills',
+
 ]
 
 # ======================

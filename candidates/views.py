@@ -2,9 +2,11 @@ from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import CandidateProfile
-from .serializers import CandidateSerializer
+
+from .models import CandidateProfile, Skill
+from .serializers import CandidateSerializer, SkillSerializer, CandidateSkillUpdateSerializer
 from accounts.permissions import IsCandidate
+
 
 # 🔒 Permission: Candidate Only
 class IsCandidate(permissions.BasePermission):
@@ -79,3 +81,18 @@ class CandidateResumeUploadView(APIView):
         candidate.save()
         return Response({"detail": "Resume uploaded successfully."}, status=status.HTTP_200_OK)
 
+
+# 🧠 List all available skills
+class SkillListView(generics.ListAPIView):
+    queryset = Skill.objects.all()
+    serializer_class = SkillSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+# 🧠 Add or update skills for current candidate
+class CandidateSkillUpdateView(generics.UpdateAPIView):
+    serializer_class = CandidateSkillUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+
+    def get_object(self):
+        return self.request.user.candidate

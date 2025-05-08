@@ -1,8 +1,18 @@
 import re
 from rest_framework import serializers
-from .models import CandidateProfile
+from .models import CandidateProfile, Skill
 
+# 🧠 Skill serializer (used in nested read/write)
+class SkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Skill
+        fields = ['id', 'name']
+
+
+# 👤 Candidate profile serializer
 class CandidateSerializer(serializers.ModelSerializer):
+    skills = SkillSerializer(many=True, read_only=True)
+
     class Meta:
         model = CandidateProfile
         fields = "__all__"
@@ -22,3 +32,14 @@ class CandidateSerializer(serializers.ModelSerializer):
         if not value.name.endswith('.pdf'):
             raise serializers.ValidationError("Resume must be a PDF.")
         return value
+
+class CandidateSkillUpdateSerializer(serializers.ModelSerializer):
+    skills = serializers.SlugRelatedField(
+        many=True,
+        slug_field='name',
+        queryset=Skill.objects.all()
+    )
+
+    class Meta:
+        model = CandidateProfile
+        fields = ['skills']
