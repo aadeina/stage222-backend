@@ -1,9 +1,9 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse  # <-- Add this
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
-from django.http import JsonResponse  # 👈 Add this
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -16,11 +16,14 @@ schema_view = get_schema_view(
    permission_classes=(permissions.AllowAny,),
 )
 
-urlpatterns = [
-    path('', lambda request: JsonResponse({"message": "Stage222 API is live ✅"})),  # 👈 Health check root path
-    path('admin/', admin.site.urls),
+# ✅ This is your health check view
+def health_check(request):
+    return JsonResponse({"status": "ok"})
 
-    # Auth & user management
+urlpatterns = [
+    path('', health_check),  # ✅ Add this route
+
+    path('admin/', admin.site.urls),
     path('api/auth/', include('accounts.urls')), 
     path('api/candidates/', include('candidates.urls')),  
     path('api/recruiters/', include('recruiters.urls')),   
@@ -30,7 +33,6 @@ urlpatterns = [
     path('api/messages/', include('messaging.urls')),
     path('api/bookmarks/', include('bookmarks.urls')),
 
-    # API docs
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]
