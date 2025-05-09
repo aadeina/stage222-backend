@@ -21,7 +21,7 @@ def health_check(request):
     return JsonResponse({"status": "ok"})
 
 urlpatterns = [
-    path('', health_check),  # ✅ Add this route
+    path('', lambda request: JsonResponse({'status': 'ok'})),
 
     path('admin/', admin.site.urls),
     path('api/auth/', include('accounts.urls')), 
