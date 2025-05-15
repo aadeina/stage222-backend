@@ -11,6 +11,8 @@ from .views import (
     ResendEmailVerificationView,
     PasswordResetRequestView,
     PasswordResetView,
+    GoogleLoginJWT, 
+    FacebookCandidateLogin
 )
 
 urlpatterns = [
@@ -24,4 +26,7 @@ urlpatterns = [
     path('resend-verification/', ResendEmailVerificationView.as_view(), name='resend-verification'),
     path('request-password-reset/', PasswordResetRequestView.as_view(), name='request-password-reset'),
     path('reset-password/', PasswordResetView.as_view(), name='reset-password'),
+    path('social/google/', GoogleLoginJWT.as_view(), name='google-login'),
+    path('social/facebook/', FacebookCandidateLogin.as_view(), name='facebook-login'),
 ]
+

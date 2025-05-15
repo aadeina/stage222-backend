@@ -9,18 +9,20 @@ from accounts.permissions import IsRecruiter, IsCandidate
 from applications.models import Application
 from applications.serializers import ApplicationSerializer
 
-# ✅ Create Internship (Recruiter only — defaults to pending approval)
+# 🎯 Recruiter-only: Post internship (approval defaults to pending)
 class InternshipCreateView(generics.CreateAPIView):
     serializer_class = InternshipSerializer
     permission_classes = [permissions.IsAuthenticated, IsRecruiter]
 
     def perform_create(self, serializer):
         recruiter = self.request.user.recruiter
-        serializer.save(recruiter=recruiter, organization=recruiter.organization)
-        # approval_status will default to 'pending'
+        serializer.save(
+            recruiter=recruiter,
+            organization=recruiter.organization
+        )
 
 
-# ✅ List Internships (Only Approved + Open for public)
+# 🌍 Public: List only approved + open internships
 class InternshipListView(generics.ListAPIView):
     serializer_class = InternshipSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -34,7 +36,7 @@ class InternshipListView(generics.ListAPIView):
         ).order_by('-created_at')
 
 
-# ✅ Retrieve, Update, Delete Internship (Recruiter only for update/delete)
+# 🛠️ Detail view: Recruiters can update/delete, public can view
 class InternshipDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Internship.objects.all()
     serializer_class = InternshipSerializer
@@ -54,20 +56,19 @@ class InternshipDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
 
 
-# ✅ Apply to Internship (Candidate only)
+# 📨 Candidate-only: Apply to internship
 class ApplyToInternshipView(generics.CreateAPIView):
     serializer_class = ApplicationSerializer
     permission_classes = [permissions.IsAuthenticated, IsCandidate]
 
     def perform_create(self, serializer):
-        try:
-            internship = get_object_or_404(Internship, id=self.kwargs["id"])
+        internship = get_object_or_404(Internship, id=self.kwargs["id"])
 
-            if internship.approval_status != 'approved':
-                raise ValidationError({"detail": "❌ This internship is not approved."})
+        if internship.approval_status != 'approved':
+            raise ValidationError({"detail": "❌ This internship is not approved."})
 
-            candidate = self.request.user.candidate
-            serializer.save(candidate=candidate, internship=internship)
+        if internship.status != 'open':
+            raise ValidationError({"detail": "❌ This internship is currently closed."})
 
-        except Exception as e:
-            raise ValidationError({"detail": f"❌ Application failed: {str(e)}"})
+        candidate = self.request.user.candidate
+        serializer.save(candidate=candidate, internship=internship)

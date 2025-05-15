@@ -8,6 +8,10 @@ from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
+from dj_rest_auth.registration.views import SocialLoginView
+from candidates.models import CandidateProfile
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from decouple import config
 
@@ -203,3 +207,45 @@ class PasswordResetView(APIView):
                 return Response({"detail": "Invalid or expired token."}, status=400)
         except User.DoesNotExist:
             return Response({"detail": "Invalid user."}, status=400)
+
+from dj_rest_auth.registration.views import SocialLoginView
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
+from rest_framework.exceptions import PermissionDenied
+
+class CandidateOnlySocialLoginView(SocialLoginView):
+    def process_login(self):
+        user = self.user
+        if user.role != 'candidate':
+            raise PermissionDenied("Only candidates can log in with Google/Facebook.")
+        return super().process_login()
+
+class GoogleCandidateLogin(CandidateOnlySocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+
+class FacebookCandidateLogin(CandidateOnlySocialLoginView):
+    adapter_class = FacebookOAuth2Adapter
+
+
+
+class GoogleLoginJWT(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+
+    def get_response(self):
+        user = self.user
+
+        # 🔐 Auto-create CandidateProfile if needed
+        if user.role == 'candidate' and not hasattr(user, 'candidate'):
+            CandidateProfile.objects.create(user=user)
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "role": user.role,
+                "is_verified": user.is_verified
+            }
+        })
