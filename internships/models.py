@@ -14,7 +14,19 @@ class Internship(BaseModel):
     stipend = models.DecimalField(max_digits=8, decimal_places=2)
     deadline = models.DateField()
     status = models.CharField(max_length=10, choices=[('open', 'Open'), ('closed', 'Closed')], default='open')
-    
+
+    # ✅ Admin approval flow
+    approval_status = models.CharField(
+        max_length=10,
+        choices=[
+            ('pending', 'Pending'),
+            ('approved', 'Approved'),
+            ('rejected', 'Rejected'),
+        ],
+        default='pending'
+    )
+    rejection_reason = models.TextField(null=True, blank=True)
+
     recruiter = models.ForeignKey('recruiters.RecruiterProfile', on_delete=models.CASCADE, related_name='internships')
     organization = models.ForeignKey('organizations.Organization', on_delete=models.CASCADE, related_name='internships')
 

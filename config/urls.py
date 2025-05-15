@@ -24,6 +24,7 @@ urlpatterns = [
     path('', lambda request: JsonResponse({'status': 'ok'})),
 
     path('admin/', admin.site.urls),
+    path('api/admin/', include('adminpanel.urls')),
     path('api/auth/', include('accounts.urls')), 
     path('api/candidates/', include('candidates.urls')),  
     path('api/recruiters/', include('recruiters.urls')),   

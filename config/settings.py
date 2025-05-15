@@ -92,6 +92,7 @@ INSTALLED_APPS = [
     'applications',
     'messaging',  # Renamed to avoid conflict with Django's built-in messages
     "bookmarks",
+    'adminpanel'
 ]
 
 # ======================

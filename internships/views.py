@@ -1,13 +1,15 @@
 from rest_framework import generics, permissions, filters, status
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
+
 from .models import Internship
 from .serializers import InternshipSerializer
 from accounts.permissions import IsRecruiter, IsCandidate
 from applications.models import Application
 from applications.serializers import ApplicationSerializer
-from django.shortcuts import get_object_or_404
 
-# ✅ Create Internship (Recruiter only)
+# ✅ Create Internship (Recruiter only — defaults to pending approval)
 class InternshipCreateView(generics.CreateAPIView):
     serializer_class = InternshipSerializer
     permission_classes = [permissions.IsAuthenticated, IsRecruiter]
@@ -15,15 +17,21 @@ class InternshipCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         recruiter = self.request.user.recruiter
         serializer.save(recruiter=recruiter, organization=recruiter.organization)
+        # approval_status will default to 'pending'
 
 
-# ✅ List Internships (Open Only)
+# ✅ List Internships (Only Approved + Open for public)
 class InternshipListView(generics.ListAPIView):
-    queryset = Internship.objects.filter(status='open')
     serializer_class = InternshipSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'location', 'description']
     ordering_fields = ['start_date', 'stipend', 'deadline']
+
+    def get_queryset(self):
+        return Internship.objects.filter(
+            approval_status='approved',
+            status='open'
+        ).order_by('-created_at')
 
 
 # ✅ Retrieve, Update, Delete Internship (Recruiter only for update/delete)
@@ -47,9 +55,6 @@ class InternshipDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ✅ Apply to Internship (Candidate only)
-from django.shortcuts import get_object_or_404
-from rest_framework.exceptions import ValidationError
-
 class ApplyToInternshipView(generics.CreateAPIView):
     serializer_class = ApplicationSerializer
     permission_classes = [permissions.IsAuthenticated, IsCandidate]
@@ -57,7 +62,12 @@ class ApplyToInternshipView(generics.CreateAPIView):
     def perform_create(self, serializer):
         try:
             internship = get_object_or_404(Internship, id=self.kwargs["id"])
+
+            if internship.approval_status != 'approved':
+                raise ValidationError({"detail": "❌ This internship is not approved."})
+
             candidate = self.request.user.candidate
             serializer.save(candidate=candidate, internship=internship)
+
         except Exception as e:
             raise ValidationError({"detail": f"❌ Application failed: {str(e)}"})
