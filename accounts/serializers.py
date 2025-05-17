@@ -5,14 +5,19 @@ from .models import User, Admin
 
 # ✅ User Registration
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, validators=[validate_password])
+    password = serializers.CharField(write_only=True, min_length=6, validators=[validate_password])
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'password', 'role']
+        fields = ['id', 'email', 'password', 'first_name', 'last_name', 'role']
+        extra_kwargs = {
+            'first_name': {'required': True},
+            'last_name': {'required': False},
+        }
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
+
 
 # 🔐 Login
 class LoginSerializer(serializers.Serializer):
@@ -27,12 +32,14 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Account disabled.")
         return {'user': user}
 
+
 # 👤 User Profile
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'role', 'is_verified', 'created_at']
+        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'is_verified', 'created_at']
         read_only_fields = ['id', 'email', 'role', 'created_at']
+
 
 # 🔐 Change Password
 class ChangePasswordSerializer(serializers.Serializer):
@@ -51,7 +58,8 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.save()
         return user
 
-# 🔁 Email Verification & Reset
+
+# 🔁 Email Verification & Password Reset
 class ResendEmailVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -63,13 +71,8 @@ class PasswordResetSerializer(serializers.Serializer):
     token = serializers.CharField()
     new_password = serializers.CharField(write_only=True, min_length=8)
 
-# 🧑‍🎓 Candidate Profile (in candidates app)
-# import this class in candidates/serializers.py to keep accounts clean
 
-# 🧑‍💼 Recruiter Profile (in recruiters app)
-# import this class in recruiters/serializers.py to keep accounts clean
-
-# 🧑‍💼 Admin (optional admin user control)
+# 🛡️ Admin Control
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = Admin

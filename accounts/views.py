@@ -1,19 +1,25 @@
-from django.contrib.auth.tokens import PasswordResetTokenGenerator, default_token_generator
+import uuid
+from django.contrib.auth.tokens import default_token_generator as token_generator
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.exceptions import ObjectDoesNotExist
+
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied
+
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
 from dj_rest_auth.registration.views import SocialLoginView
-from candidates.models import CandidateProfile
-from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+
 from decouple import config
+from candidates.models import CandidateProfile
 
 from accounts.models import User
 from accounts.serializers import (
@@ -22,14 +28,20 @@ from accounts.serializers import (
     UserSerializer,
     ChangePasswordSerializer,
     ResendEmailVerificationSerializer,
-    PasswordResetRequestSerializer, 
-    PasswordResetSerializer           
+    PasswordResetRequestSerializer,
+    PasswordResetSerializer
 )
-from core.ratelimits import limit_login, limit_register, limit_change_password, limit_password_reset, limit_password_reset_request
 
-token_generator = PasswordResetTokenGenerator()
+from core.ratelimits import (
+    limit_login,
+    limit_register,
+    limit_change_password,
+    limit_password_reset,
+    limit_password_reset_request
+)
 
-# ✅ Register with email verification
+
+# ✅ Register with email verification + auto candidate profile
 @limit_register()
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -38,6 +50,10 @@ class RegisterView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = serializer.save()
+
+        if user.role == 'candidate' and not hasattr(user, 'candidate'):
+            CandidateProfile.objects.create(user=user)
+
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = token_generator.make_token(user)
         verify_url = f"{settings.FRONTEND_URL}/verify-email/?uid={uid}&token={token}"
@@ -50,6 +66,7 @@ class RegisterView(generics.CreateAPIView):
             fail_silently=False,
         )
 
+
 # 🔐 Login
 @limit_login()
 class LoginView(generics.GenericAPIView):
@@ -61,36 +78,42 @@ class LoginView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         refresh = RefreshToken.for_user(user)
+
         return Response({
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user': {
                 'id': str(user.id),
                 'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
                 'role': user.role,
                 'is_verified': user.is_verified
             }
         })
 
+
 # 👤 User Profile
 class ProfileView(generics.RetrieveUpdateAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
 
     def get_object(self):
         return self.request.user
 
+
 # 🔐 Change Password
 @limit_change_password()
 class ChangePasswordView(generics.UpdateAPIView):
     serializer_class = ChangePasswordSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def update(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
+
 
 # 🚪 Logout
 class LogoutView(APIView):
@@ -106,6 +129,7 @@ class LogoutView(APIView):
             return Response({"detail": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
         except TokenError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 # ✅ Email Verification
 class VerifyEmailView(APIView):
@@ -129,6 +153,8 @@ class VerifyEmailView(APIView):
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             return Response({"detail": "Invalid verification link."}, status=status.HTTP_400_BAD_REQUEST)
 
+
+# 🔁 Resend Email Verification
 class ResendEmailVerificationView(APIView):
     permission_classes = [AllowAny]
 
@@ -143,13 +169,13 @@ class ResendEmailVerificationView(APIView):
                 return Response({'detail': 'Email is already verified.'}, status=status.HTTP_400_BAD_REQUEST)
 
             uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
+            token = token_generator.make_token(user)
 
-            verify_url = f"{config('FRONTEND_URL')}/api/auth/verify-email/?uid={uid}&token={token}"
+            verify_url = f"{config('FRONTEND_URL')}/verify-email/?uid={uid}&token={token}"
             send_mail(
                 subject="Verify your email for Stage222",
                 message=f"Click the link to verify your email: {verify_url}",
-                from_email=config("EMAIL_HOST_USER"),
+                from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
                 fail_silently=False,
             )
@@ -159,6 +185,8 @@ class ResendEmailVerificationView(APIView):
         except ObjectDoesNotExist:
             return Response({'detail': 'No user found with this email.'}, status=status.HTTP_404_NOT_FOUND)
 
+
+# 🔁 Request Password Reset
 @limit_password_reset_request()
 class PasswordResetRequestView(APIView):
     permission_classes = [AllowAny]
@@ -171,7 +199,7 @@ class PasswordResetRequestView(APIView):
         try:
             user = User.objects.get(email=email)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
+            token = token_generator.make_token(user)
             reset_url = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
 
             send_mail(
@@ -182,10 +210,12 @@ class PasswordResetRequestView(APIView):
                 fail_silently=False,
             )
         except User.DoesNotExist:
-            pass  # Don't reveal existence of email
+            pass  # Do not leak user existence
 
         return Response({"detail": "If the email is valid, a reset link has been sent."})
 
+
+# 🔁 Reset Password via Token
 @limit_password_reset()
 class PasswordResetView(APIView):
     permission_classes = [AllowAny]
@@ -199,7 +229,7 @@ class PasswordResetView(APIView):
 
         try:
             user = User.objects.get(pk=uid)
-            if default_token_generator.check_token(user, token):
+            if token_generator.check_token(user, token):
                 user.set_password(new_password)
                 user.save()
                 return Response({"detail": "Password reset successful."})
@@ -208,33 +238,44 @@ class PasswordResetView(APIView):
         except User.DoesNotExist:
             return Response({"detail": "Invalid user."}, status=400)
 
-from dj_rest_auth.registration.views import SocialLoginView
-from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
-from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
-from rest_framework.exceptions import PermissionDenied
-
+# 🌐 Social Login (Candidates Only)
 class CandidateOnlySocialLoginView(SocialLoginView):
     def process_login(self):
         user = self.user
+
+        # Set default role if not yet assigned
+        if not user.role:
+            user.role = 'candidate'
+            user.save()
+
+        # Prevent access only if role is set and not candidate
         if user.role != 'candidate':
             raise PermissionDenied("Only candidates can log in with Google/Facebook.")
+
         return super().process_login()
+
 
 class GoogleCandidateLogin(CandidateOnlySocialLoginView):
     adapter_class = GoogleOAuth2Adapter
+
 
 class FacebookCandidateLogin(CandidateOnlySocialLoginView):
     adapter_class = FacebookOAuth2Adapter
 
 
-
+# 🌐 Google Login With JWT Response
 class GoogleLoginJWT(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
 
     def get_response(self):
         user = self.user
 
-        # 🔐 Auto-create CandidateProfile if needed
+        # Set default role if missing
+        if not user.role:
+            user.role = 'candidate'
+            user.save()
+
+        # Auto-create CandidateProfile if needed
         if user.role == 'candidate' and not hasattr(user, 'candidate'):
             CandidateProfile.objects.create(user=user)
 
@@ -245,6 +286,8 @@ class GoogleLoginJWT(SocialLoginView):
             "user": {
                 "id": str(user.id),
                 "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
                 "role": user.role,
                 "is_verified": user.is_verified
             }
