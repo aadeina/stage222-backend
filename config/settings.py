@@ -198,7 +198,30 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
     ],
 }
+# 🔐 Tell Allauth clearly: No username field used at all
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_REQUIRED = True
+
+# ✅ Login method
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+
+# ✅ Only these fields in signup
+ACCOUNT_SIGNUP_FIELDS = ['email', 'password1', 'password2']
+
+# ✅ Clean modern config for dj-rest-auth
+REST_AUTH = {
+    "SIGNUP_FIELDS": {
+        "email": {"required": True},
+        "password1": {"required": True},
+        "password2": {"required": True}
+    }
+}
+
+
 REST_USE_JWT = True
+
+
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
@@ -216,10 +239,6 @@ SIMPLE_JWT = {
 # ======================
 
 AUTH_USER_MODEL = 'accounts.User'
-
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
-ACCOUNT_LOGIN_METHODS = {'email'}
 
 
 # ======================
@@ -251,4 +270,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS SETTINGS
 # ======================
 
-CORS_ALLOW_ALL_ORIGINS = True  # ⚠️ Dev only! Restrict this in production.
+CORS_ALLOWED_ORIGINS = [
+      "http://localhost:5173",  # or your frontend port
+      "http://127.0.0.1:5173",
+  ]
+CORS_ALLOW_CREDENTIALS = True
+
+# ======================
+# CHINGUISOFT SMS API
+# ======================
+
+CHINGUISOFT_VALIDATION_KEY = config('CHINGUISOFT_VALIDATION_KEY')
+CHINGUISOFT_VALIDATION_TOKEN = config('CHINGUISOFT_VALIDATION_TOKEN')
+CHINGUISOFT_API_BASE_URL = config('CHINGUISOFT_API_BASE_URL')

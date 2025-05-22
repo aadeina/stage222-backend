@@ -1,22 +1,53 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
+from django.core.validators import RegexValidator
 from .models import User, Admin
+from recruiters.models import RecruiterProfile
 
-# ✅ User Registration
+# ✅ User Registration (Candidate or Generic)
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=6, validators=[validate_password])
+    phone_number = serializers.CharField(required=True)
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'password', 'first_name', 'last_name', 'role']
-        extra_kwargs = {
-            'first_name': {'required': True},
-            'last_name': {'required': False},
-        }
+        fields = ['email', 'password', 'first_name', 'last_name', 'phone_number', 'role']
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
+
+
+
+# ✅ Recruiter Registration (Dedicated Flow)
+class RecruiterRegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=6, validators=[validate_password])
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+    phone_number = serializers.CharField(
+        required=True,
+        validators=[RegexValidator(regex=r'^[234]\d{7}$', message="Enter a valid 8-digit Mauritanian number.")]
+    )
+
+    class Meta:
+        model = User
+        fields = ['email', 'password', 'phone_number', 'first_name', 'last_name']
+
+    def create(self, validated_data):
+        first_name = validated_data.pop('first_name')
+        last_name = validated_data.pop('last_name')
+        phone_number = validated_data.pop('phone_number')
+
+        user = User.objects.create_user(
+            role='recruiter',
+            phone_number=phone_number,
+            **validated_data
+        )
+        RecruiterProfile.objects.create(
+            user=user,
+            first_name=first_name,
+            last_name=last_name,
+        )
+        return user
 
 
 # 🔐 Login
@@ -70,6 +101,11 @@ class PasswordResetSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()
     new_password = serializers.CharField(write_only=True, min_length=8)
+
+def validate_phone_number(self, value):
+    if RecruiterProfile.objects.filter(phone=value).exists():
+        raise serializers.ValidationError("Recruiter with this phone number already exists.")
+    return value
 
 
 # 🛡️ Admin Control
