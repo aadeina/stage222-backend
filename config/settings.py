@@ -153,7 +153,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'core', 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -283,3 +283,10 @@ CORS_ALLOW_CREDENTIALS = True
 CHINGUISOFT_VALIDATION_KEY = config('CHINGUISOFT_VALIDATION_KEY')
 CHINGUISOFT_VALIDATION_TOKEN = config('CHINGUISOFT_VALIDATION_TOKEN')
 CHINGUISOFT_API_BASE_URL = config('CHINGUISOFT_API_BASE_URL')
+
+# ======================
+# SENDGRID API
+# ======================
+
+SENDGRID_API_KEY = config("SENDGRID_API_KEY")
+

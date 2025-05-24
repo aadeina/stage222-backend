@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import User, Admin
+from .models import User, Admin, EmailOTP, OTPAttempt
+
+# ==============================
+# 🔐 User Model Admin
+# ==============================
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
@@ -18,16 +22,43 @@ class UserAdmin(admin.ModelAdmin):
     deactivate_users.short_description = "❌ Deactivate selected users"
 
 
+# ==============================
+# 👤 Admin Profile Admin
+# ==============================
+
 @admin.register(Admin)
 class AdminAdmin(admin.ModelAdmin):
     list_display = ('user', 'email')
     search_fields = ('user__email',)
 
 
+# ==============================
+# 🔐 OTP Admin (for email verification)
+# ==============================
+
+@admin.register(EmailOTP)
+class EmailOTPAdmin(admin.ModelAdmin):
+    list_display = ('user', 'otp_code', 'is_used', 'created_at')
+    list_filter = ('is_used',)
+    search_fields = ('user__email', 'otp_code')
+    ordering = ('-created_at',)
 
 
+# ==============================
+# 📊 OTP Attempt Logs
+# ==============================
 
-from django.contrib import admin
+@admin.register(OTPAttempt)
+class OTPAttemptAdmin(admin.ModelAdmin):
+    list_display = ('email', 'otp_code', 'is_successful', 'ip_address', 'timestamp')
+    list_filter = ('is_successful',)
+    search_fields = ('email', 'otp_code', 'ip_address')
+    ordering = ('-timestamp',)
+
+
+# ==============================
+# 🧠 Admin Site Branding
+# ==============================
 
 admin.site.site_header = "Stage222 Admin Dashboard"
 admin.site.site_title = "Stage222 Admin"

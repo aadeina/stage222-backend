@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>{{ otp_code }} is your Stage222 verification code</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @media only screen and (max-width: 620px) {
+      .container { width: 100% !important; padding: 20px !important; }
+      .otp { font-size: 20px !important; }
+      .btn { width: 100% !important; }
+    }
+  </style>
+</head>
+<body style="background:#f4f4f4; font-family:'Segoe UI', Tahoma, sans-serif;">
+  <table width="100%" style="padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table class="container" width="600" style="background:#fff; border-radius:8px; overflow:hidden;">
+          <tr>
+            <td style="background:#00A55F; padding:30px; text-align:center;">
+              <img src="https://files.mailersend.com/ChatGPT Image May 16, 2025, 07_01_33 PM.png" height="40" alt="Stage222 Logo">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px 30px;">
+              <h2 style="color:#00A55F;">{{ otp_code }} is the OTP to verify your email</h2>
+              <p>Hi <strong>{{ user_name }}</strong>,<br>Use this OTP to verify your Stage222 account. Valid for <strong>15 minutes</strong>:</p>
+              <div style="text-align:center; margin:30px 0;">
+                <span class="otp" style="font-size:24px; letter-spacing:10px; background:#f0f0f0; padding:10px 20px; border-radius:6px; font-weight:bold;">{{ otp_code }}</span>
+              </div>
+              <p>Or click the button below to verify:</p>
+              <div style="text-align:center;">
+                <a href="{{ verify_url }}" class="btn" style="background:#00A55F; color:#fff; padding:12px 24px; text-decoration:none; border-radius:6px;">✅ Verify Email</a>
+              </div>
+              <p style="font-size:13px; color:#888;">If you didn’t request this, you can ignore it.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px; background:#f9f9f9; text-align:center; font-size:13px; color:#999;">
+              &copy; 2025 Stage222 · <a href="https://stage222.com">stage222.com</a><br>
+              Made with 💚 in Mauritania
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
