@@ -271,9 +271,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ======================
 
 CORS_ALLOWED_ORIGINS = [
-      "http://localhost:5173",  # or your frontend port
-      "http://127.0.0.1:5173",
-  ]
+    "http://localhost:5173",        # Vite default
+    "http://localhost:5174",        # Your current dev server
+    "http://127.0.0.1:5173",        # Access via 127.0.0.1
+    "https://stage222.com",         # Your production domain
+]
 CORS_ALLOW_CREDENTIALS = True
 
 # ======================
