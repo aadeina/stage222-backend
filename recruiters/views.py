@@ -1,4 +1,4 @@
-# views.py (to be placed in your recruiters/views.py)
+# views.py (in recruiters/views.py)
 
 import random
 import requests
@@ -112,3 +112,25 @@ class VerifyRecruiterOTPView(APIView):
             return Response({"message": "Phone number verified successfully."})
         else:
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ✅ NEW: RecruiterOnboardingView
+
+class RecruiterOnboardingView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsRecruiter]
+
+    def post(self, request):
+        user = request.user
+
+        data = request.data.copy()
+        data['user'] = str(user.id)
+
+        if hasattr(user, 'recruiter'):
+            serializer = RecruiterSerializer(user.recruiter, data=data, partial=True)
+        else:
+            serializer = RecruiterSerializer(data=data)
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save(is_onboarded=True)
+
+        return Response({"message": "Recruiter onboarding complete"}, status=status.HTTP_201_CREATED)
