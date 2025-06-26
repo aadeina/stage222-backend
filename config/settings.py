@@ -23,7 +23,7 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 FRONTEND_URL = config('FRONTEND_URL')
 
 # settings.py
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # ======================
 # PASSWORD VALIDATORS

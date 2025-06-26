@@ -107,6 +107,45 @@ def validate_phone_number(self, value):
         raise serializers.ValidationError("Recruiter with this phone number already exists.")
     return value
 
+# accounts/serializers.py
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+# from django.contrib.auth import get_user_model
+# from rest_framework import serializers
+
+# User = get_user_model()
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=6)
+    password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, data):
+        email = data['email']
+        code = data['code']
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User with this email does not exist.")
+
+        if user.reset_code != code:
+            raise serializers.ValidationError("Invalid reset code.")
+
+        return data
+
+    def save(self):
+        email = self.validated_data['email']
+        password = self.validated_data['password']
+        user = User.objects.get(email=email)
+        user.set_password(password)
+        user.reset_code = None  # Clear the code
+        user.save()
+        return user
+
 
 # 🛡️ Admin Control
 class AdminSerializer(serializers.ModelSerializer):

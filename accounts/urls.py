@@ -17,8 +17,10 @@ from .views import (
     
 
     # Password reset
-    PasswordResetRequestView,
-    PasswordResetView,
+    # PasswordResetRequestView,
+    # PasswordResetView,
+    PasswordResetRequestView, 
+    PasswordResetConfirmView,
 
     # Social logins
     GoogleLoginJWT, 
@@ -41,8 +43,11 @@ urlpatterns = [
     path('resend-verification/', ResendEmailVerificationView.as_view(), name='resend-verification'),
 
     # Password Reset
-    path('request-password-reset/', PasswordResetRequestView.as_view(), name='request-password-reset'),
-    path('reset-password/', PasswordResetView.as_view(), name='reset-password'),
+    path('password-reset-request/', PasswordResetRequestView.as_view(), name='password-reset-request'),
+    path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
+
+    # path('request-password-reset/', PasswordResetRequestView.as_view(), name='request-password-reset'),
+    # path('reset-password/', PasswordResetView.as_view(), name='reset-password'),
 
     # Social Logins
     path('social/google/', GoogleLoginJWT.as_view(), name='google-login'),
@@ -50,4 +55,11 @@ urlpatterns = [
     path('resend-otp/', ResendOTPVerificationView.as_view(), name='resend-otp'),
 
 
+]
+
+
+ 
+
+urlpatterns += [
+    
 ]

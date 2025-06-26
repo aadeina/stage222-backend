@@ -26,7 +26,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    reset_code = models.CharField(max_length=6, blank=True, null=True)
+    reset_code_created_at = models.DateTimeField(blank=True, null=True)
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'email'
@@ -35,10 +36,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = "User"
         verbose_name_plural = "Users"
+
 
 
 class Admin(models.Model):

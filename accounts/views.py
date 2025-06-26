@@ -18,7 +18,10 @@ from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
 from dj_rest_auth.registration.views import SocialLoginView
+from .serializers import PasswordResetRequestSerializer, PasswordResetSerializer
 from decouple import config
+from utils.email_utils import send_password_reset_email
+
 
 from accounts.models import User, EmailOTP, OTPAttempt
 from candidates.models import CandidateProfile
@@ -98,6 +101,8 @@ class RegisterView(APIView):
 
 
 # 🔐 Login
+from recruiters.models import RecruiterProfile  # if not already imported
+
 @limit_login()
 class LoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
@@ -109,18 +114,29 @@ class LoginView(generics.GenericAPIView):
         user = serializer.validated_data['user']
         refresh = RefreshToken.for_user(user)
 
+        # Default fields
+        user_data = {
+            'id': str(user.id),
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'role': user.role,
+            'is_verified': user.is_verified
+        }
+
+        # Add recruiter onboarding state if recruiter
+        if user.role == 'recruiter':
+            try:
+                user_data['is_onboarded'] = user.recruiter.is_onboarded
+            except (AttributeError, RecruiterProfile.DoesNotExist):
+                user_data['is_onboarded'] = False
+
         return Response({
             'access': str(refresh.access_token),
             'refresh': str(refresh),
-            'user': {
-                'id': str(user.id),
-                'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'role': user.role,
-                'is_verified': user.is_verified
-            }
+            'user': user_data
         })
+
 
 
 # 👤 User Profile
@@ -214,57 +230,57 @@ class ResendEmailVerificationView(APIView):
 
 
 
-# 🔁 Request Password Reset
-@limit_password_reset_request()
-class PasswordResetRequestView(APIView):
-    permission_classes = [AllowAny]
+# # 🔁 Request Password Reset
+# @limit_password_reset_request()
+# class PasswordResetRequestView(APIView):
+#     permission_classes = [AllowAny]
 
-    def post(self, request):
-        serializer = PasswordResetRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data['email']
+#     def post(self, request):
+#         serializer = PasswordResetRequestSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         email = serializer.validated_data['email']
 
-        try:
-            user = User.objects.get(email=email)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = token_generator.make_token(user)
-            reset_url = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
+#         try:
+#             user = User.objects.get(email=email)
+#             uid = urlsafe_base64_encode(force_bytes(user.pk))
+#             token = token_generator.make_token(user)
+#             reset_url = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
 
-            send_mail(
-                subject="Reset your password - Stage222",
-                message=f"Click to reset your password: {reset_url}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
-        except User.DoesNotExist:
-            pass  # Do not leak user existence
+#             send_mail(
+#                 subject="Reset your password - Stage222",
+#                 message=f"Click to reset your password: {reset_url}",
+#                 from_email=settings.DEFAULT_FROM_EMAIL,
+#                 recipient_list=[user.email],
+#                 fail_silently=False,
+#             )
+#         except User.DoesNotExist:
+#             pass  # Do not leak user existence
 
-        return Response({"detail": "If the email is valid, a reset link has been sent."})
+#         return Response({"detail": "If the email is valid, a reset link has been sent."})
 
 
 # 🔁 Reset Password via Token
-@limit_password_reset()
-class PasswordResetView(APIView):
-    permission_classes = [AllowAny]
+# @limit_password_reset()
+# class PasswordResetView(APIView):
+#     permission_classes = [AllowAny]
 
-    def post(self, request):
-        serializer = PasswordResetSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        uid = force_str(urlsafe_base64_decode(serializer.validated_data['uid']))
-        token = serializer.validated_data['token']
-        new_password = serializer.validated_data['new_password']
+#     def post(self, request):
+#         serializer = PasswordResetSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         uid = force_str(urlsafe_base64_decode(serializer.validated_data['uid']))
+#         token = serializer.validated_data['token']
+#         new_password = serializer.validated_data['new_password']
 
-        try:
-            user = User.objects.get(pk=uid)
-            if token_generator.check_token(user, token):
-                user.set_password(new_password)
-                user.save()
-                return Response({"detail": "Password reset successful."})
-            else:
-                return Response({"detail": "Invalid or expired token."}, status=400)
-        except User.DoesNotExist:
-            return Response({"detail": "Invalid user."}, status=400)
+#         try:
+#             user = User.objects.get(pk=uid)
+#             if token_generator.check_token(user, token):
+#                 user.set_password(new_password)
+#                 user.save()
+#                 return Response({"detail": "Password reset successful."})
+#             else:
+#                 return Response({"detail": "Invalid or expired token."}, status=400)
+#         except User.DoesNotExist:
+#             return Response({"detail": "Invalid user."}, status=400)
 
 # 🌐 Social Login (Candidates Only)
 class CandidateOnlySocialLoginView(SocialLoginView):
@@ -427,3 +443,64 @@ class ResendOTPVerificationView(APIView):
         )
 
         return Response({"detail": "📩 Verification OTP resent."}, status=200)
+
+class PasswordResetRequestView(APIView):
+    """
+    📩 Request a password reset code via email
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"detail": "📧 Email is required."}, status=400)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"detail": "❌ No account found with this email."}, status=404)
+
+        # Generate 6-digit reset code
+        reset_code = str(random.randint(100000, 999999))
+        user.reset_code = reset_code
+        user.reset_code_created_at = timezone.now()
+        user.save()
+
+        # Construct frontend reset link (replace with real domain)
+        reset_link = f"https://stage222.com/reset-password/{user.id}/"
+
+        # Send email
+        send_password_reset_email(user.email, reset_link)
+
+        return Response({"detail": "📬 Password reset link has been sent to your email."}, status=200)
+
+class PasswordResetConfirmView(APIView):
+    """
+    🔐 Confirm the reset code and set a new password
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        code = request.data.get("code")
+        new_password = request.data.get("new_password")
+
+        if not all([email, code, new_password]):
+            return Response({"detail": "📧 Email, 🔢 code, and 🔐 new password are required."}, status=400)
+
+        try:
+            user = User.objects.get(email=email, reset_code=code)
+        except User.DoesNotExist:
+            return Response({"detail": "❌ Invalid email or reset code."}, status=400)
+
+        # Optional: check if reset code is expired (15 mins)
+        if user.reset_code_created_at and (timezone.now() - user.reset_code_created_at).total_seconds() > 900:
+            return Response({"detail": "⏰ Reset code expired. Request a new one."}, status=400)
+
+        # Set new password
+        user.set_password(new_password)
+        user.reset_code = None
+        user.reset_code_created_at = None
+        user.save()
+
+        return Response({"detail": "✅ Password has been successfully reset!"}, status=200)

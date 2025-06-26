@@ -7,8 +7,16 @@ class RecruiterProfileAdmin(admin.ModelAdmin):
         return obj.user.email
     email.short_description = 'Email'
 
-    list_display = ('first_name', 'last_name', 'email', 'designation', 'is_verified', 'organization')
-    list_filter = ('is_verified', 'organization')
+    list_display = (
+        'first_name',
+        'last_name',
+        'email',
+        'designation',
+        'is_verified',
+        'is_onboarded',  # ✅ Added onboarding status
+        'organization',
+    )
+    list_filter = ('is_verified', 'is_onboarded', 'organization')  # ✅ Filter by onboarding
     search_fields = ('first_name', 'last_name', 'user__email')
     ordering = ('-created_at',)
     actions = ['verify_selected', 'unverify_selected']

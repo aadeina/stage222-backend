@@ -18,6 +18,7 @@ class RecruiterProfile(BaseModel):
     designation = models.CharField(max_length=100)
     is_verified = models.BooleanField(default=False)
     verification_code = models.CharField(max_length=6, blank=True, null=True)
+    is_onboarded = models.BooleanField(default=False)
 
     organization = models.OneToOneField(
         Organization,
