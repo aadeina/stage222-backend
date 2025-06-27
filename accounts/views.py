@@ -11,6 +11,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from rest_framework import status, generics, permissions
 from rest_framework.permissions import AllowAny, IsAuthenticated
+
+
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied
@@ -20,7 +22,8 @@ from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
 from dj_rest_auth.registration.views import SocialLoginView
 from .serializers import PasswordResetRequestSerializer, PasswordResetSerializer
 from decouple import config
-from utils.email_utils import send_password_reset_email
+from core.email_utils import send_password_reset_email 
+
 
 
 from accounts.models import User, EmailOTP, OTPAttempt
@@ -444,9 +447,18 @@ class ResendOTPVerificationView(APIView):
 
         return Response({"detail": "📩 Verification OTP resent."}, status=200)
 
+import random
+from django.utils import timezone
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+
+from accounts.models import User
+# from utils.email_utils import send_password_reset_email  # ✅ use correct function name
+
 class PasswordResetRequestView(APIView):
     """
-    📩 Request a password reset code via email
+    📩 Request a 6-digit OTP to reset your Stage222 password.
     """
     permission_classes = [AllowAny]
 
@@ -460,23 +472,28 @@ class PasswordResetRequestView(APIView):
         except User.DoesNotExist:
             return Response({"detail": "❌ No account found with this email."}, status=404)
 
-        # Generate 6-digit reset code
+        # Generate 6-digit OTP
         reset_code = str(random.randint(100000, 999999))
         user.reset_code = reset_code
         user.reset_code_created_at = timezone.now()
         user.save()
 
-        # Construct frontend reset link (replace with real domain)
-        reset_link = f"https://stage222.com/reset-password/{user.id}/"
+        try:
+            send_password_reset_email(
+                to_email=user.email,
+                user_name=user.first_name,
+                reset_code=reset_code
+            )
+        except Exception as e:
+            print(f"❌ Failed to send OTP email: {e}")
+            return Response({"detail": "⚠️ Failed to send OTP. Please try again later."}, status=500)
 
-        # Send email
-        send_password_reset_email(user.email, reset_link)
+        return Response({"detail": "📬 Password reset OTP has been sent to your email."}, status=200)
 
-        return Response({"detail": "📬 Password reset link has been sent to your email."}, status=200)
 
 class PasswordResetConfirmView(APIView):
     """
-    🔐 Confirm the reset code and set a new password
+    🔐 Confirm the OTP and set a new Stage222 password.
     """
     permission_classes = [AllowAny]
 
@@ -491,16 +508,16 @@ class PasswordResetConfirmView(APIView):
         try:
             user = User.objects.get(email=email, reset_code=code)
         except User.DoesNotExist:
-            return Response({"detail": "❌ Invalid email or reset code."}, status=400)
+            return Response({"detail": "❌ Invalid email or OTP code."}, status=400)
 
-        # Optional: check if reset code is expired (15 mins)
+        # Check if code expired (valid for 15 minutes)
         if user.reset_code_created_at and (timezone.now() - user.reset_code_created_at).total_seconds() > 900:
-            return Response({"detail": "⏰ Reset code expired. Request a new one."}, status=400)
+            return Response({"detail": "⏰ OTP code expired. Please request a new one."}, status=400)
 
-        # Set new password
+        # Reset password
         user.set_password(new_password)
         user.reset_code = None
         user.reset_code_created_at = None
         user.save()
 
-        return Response({"detail": "✅ Password has been successfully reset!"}, status=200)
+        return Response({"detail": "✅ Your password has been reset successfully!"}, status=200)
