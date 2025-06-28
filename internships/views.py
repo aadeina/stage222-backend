@@ -2,10 +2,11 @@ from rest_framework import generics, permissions, filters, status
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 
 from .models import Internship
 from .serializers import InternshipSerializer
-from accounts.permissions import IsRecruiter, IsCandidate
+from accounts.permissions import IsRecruiter, IsCandidate, IsAdmin
 from applications.models import Application
 from applications.serializers import ApplicationSerializer
 
@@ -36,7 +37,39 @@ class InternshipListView(generics.ListAPIView):
         ).order_by('-created_at')
 
 
-# 🛠️ Detail view: Recruiters can update/delete, public can view
+# 🔒 Recruiter-only: List their posted internships
+class MyInternshipsView(generics.ListAPIView):
+    serializer_class = InternshipSerializer
+    permission_classes = [permissions.IsAuthenticated, IsRecruiter]
+
+    def get_queryset(self):
+        return Internship.objects.filter(recruiter=self.request.user.recruiter)
+
+
+# 🔐 Admin-only: Approve or reject internships
+class InternshipApprovalView(generics.UpdateAPIView):
+    serializer_class = InternshipSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+    queryset = Internship.objects.all()
+    lookup_field = 'id'
+
+    def update(self, request, *args, **kwargs):
+        internship = self.get_object()
+        status_choice = request.data.get("approval_status")
+        rejection_reason = request.data.get("rejection_reason", None)
+
+        if status_choice not in ['approved', 'rejected']:
+            return Response({"error": "Invalid approval status."}, status=400)
+
+        internship.approval_status = status_choice
+        if status_choice == 'rejected':
+            internship.rejection_reason = rejection_reason
+        internship.save()
+
+        return Response({"message": f"Internship has been {status_choice}."}, status=200)
+
+
+# 📄 Public & Recruiter: View, update, or delete internship
 class InternshipDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Internship.objects.all()
     serializer_class = InternshipSerializer

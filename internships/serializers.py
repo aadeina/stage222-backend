@@ -5,10 +5,10 @@ from .models import Internship
 
 
 class InternshipSerializer(serializers.ModelSerializer):
-    """
-    Serializer for creating and updating Internship postings.
-    Includes validation for salary and incentive ranges.
-    """
+    recruiter_name = serializers.SerializerMethodField()
+    organization_name = serializers.SerializerMethodField()
+    organization_logo = serializers.SerializerMethodField()
+    stipend_display = serializers.SerializerMethodField()
 
     class Meta:
         model = Internship
@@ -22,15 +22,33 @@ class InternshipSerializer(serializers.ModelSerializer):
             'status',
         ]
 
+    def get_recruiter_name(self, obj):
+        return obj.recruiter.user.get_full_name()
+
+    def get_organization_name(self, obj):
+        return obj.organization.name
+
+    def get_organization_logo(self, obj):
+        if obj.organization.logo:
+            return obj.organization.logo.url
+        return None
+
+    def get_stipend_display(self, obj):
+        if obj.stipend_type == 'fixed':
+            return f"{obj.fixed_pay_min:,} – {obj.fixed_pay_max:,} MRU"
+        elif obj.stipend_type == 'range':
+            return f"{obj.fixed_pay_min:,} – {obj.fixed_pay_max:,} MRU (+ Incentives)"
+        elif obj.stipend_type == 'unpaid':
+            return "Unpaid"
+        return "—"
+
     def validate(self, data):
-        # Validate fixed pay range
         min_fixed = data.get('fixed_pay_min')
         max_fixed = data.get('fixed_pay_max')
         if min_fixed is not None and max_fixed is not None:
             if min_fixed > max_fixed:
                 raise serializers.ValidationError("Fixed pay min cannot exceed max")
 
-        # Validate incentive range
         min_incentive = data.get('incentives_min')
         max_incentive = data.get('incentives_max')
         if min_incentive is not None and max_incentive is not None:
