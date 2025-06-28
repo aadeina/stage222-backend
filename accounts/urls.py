@@ -46,9 +46,6 @@ urlpatterns = [
     path('password-reset-request/', PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
 
-    # path('request-password-reset/', PasswordResetRequestView.as_view(), name='request-password-reset'),
-    # path('reset-password/', PasswordResetView.as_view(), name='reset-password'),
-
     # Social Logins
     path('social/google/', GoogleLoginJWT.as_view(), name='google-login'),
     path('social/facebook/', FacebookCandidateLogin.as_view(), name='facebook-login'),

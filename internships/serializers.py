@@ -1,8 +1,40 @@
+# internships/serializers.py
+
 from rest_framework import serializers
 from .models import Internship
 
+
 class InternshipSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating and updating Internship postings.
+    Includes validation for salary and incentive ranges.
+    """
+
     class Meta:
         model = Internship
         fields = '__all__'
-        read_only_fields = ['id', 'recruiter', 'organization', 'created_at', 'updated_at', 'status']
+        read_only_fields = [
+            'id',
+            'recruiter',
+            'organization',
+            'created_at',
+            'updated_at',
+            'status',
+        ]
+
+    def validate(self, data):
+        # Validate fixed pay range
+        min_fixed = data.get('fixed_pay_min')
+        max_fixed = data.get('fixed_pay_max')
+        if min_fixed is not None and max_fixed is not None:
+            if min_fixed > max_fixed:
+                raise serializers.ValidationError("Fixed pay min cannot exceed max")
+
+        # Validate incentive range
+        min_incentive = data.get('incentives_min')
+        max_incentive = data.get('incentives_max')
+        if min_incentive is not None and max_incentive is not None:
+            if min_incentive > max_incentive:
+                raise serializers.ValidationError("Incentives min cannot exceed max")
+
+        return data
