@@ -4,6 +4,7 @@ from .views import (
     OrganizationDetailView,
     OrganizationCreateView,
     OrganizationUpdateView,
+    MyOrganizationView
 )
 
 urlpatterns = [
@@ -18,4 +19,6 @@ urlpatterns = [
 
     # ✏️ Recruiter-only: Update an organization (must be owner)
     path('<uuid:id>/update/', OrganizationUpdateView.as_view(), name='organization-update'),
+
+    path('me/', MyOrganizationView.as_view(), name='organization-me'),
 ]

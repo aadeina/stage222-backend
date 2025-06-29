@@ -5,14 +5,14 @@ from .models import Organization
 from .serializers import OrganizationSerializer
 from accounts.permissions import IsRecruiter
 
-# 🔍 Public list of all organizations
+# 🔍 Public: List all organizations
 class OrganizationListView(generics.ListAPIView):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
     permission_classes = [permissions.AllowAny]
 
 
-# 🌐 Public detail view of an organization by UUID
+# 🌐 Public: Get one organization by UUID
 class OrganizationDetailView(generics.RetrieveAPIView):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
@@ -20,7 +20,7 @@ class OrganizationDetailView(generics.RetrieveAPIView):
     lookup_field = 'id'
 
 
-# 🏢 Create a new organization (only one per recruiter)
+# 🏢 Recruiter-only: Create a new organization
 class OrganizationCreateView(generics.CreateAPIView):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
@@ -36,10 +36,8 @@ class OrganizationCreateView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         organization = serializer.save()
 
-        # Link to recruiter
         recruiter.organization = organization
 
-        # Auto-verify if all methods provided
         if (
             organization.license_document and
             organization.website and
@@ -51,12 +49,12 @@ class OrganizationCreateView(generics.CreateAPIView):
 
         return Response({
             "status": "success",
-            "message": "🎉 Organization created successfully. Redirecting to post opportunity...",
+            "message": "🎉 Organization created successfully.",
             "data": serializer.data
         }, status=status.HTTP_201_CREATED)
 
 
-# ✏️ Update organization (only by owning recruiter)
+# ✏️ Recruiter-only: Update an organization
 class OrganizationUpdateView(generics.UpdateAPIView):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
@@ -74,7 +72,6 @@ class OrganizationUpdateView(generics.UpdateAPIView):
         serializer.is_valid(raise_exception=True)
         updated_org = serializer.save()
 
-        # Re-check verification if fields changed
         if (
             updated_org.license_document and
             updated_org.website and
@@ -88,3 +85,13 @@ class OrganizationUpdateView(generics.UpdateAPIView):
             "message": "✅ Organization updated successfully.",
             "data": serializer.data
         }, status=status.HTTP_200_OK)
+
+
+# 🙋‍♂️ Recruiter-only: Get current user's organization
+class MyOrganizationView(generics.RetrieveAPIView):
+    serializer_class = OrganizationSerializer
+    permission_classes = [permissions.IsAuthenticated, IsRecruiter]
+
+    def get_object(self):
+        recruiter = self.request.user.recruiter
+        return recruiter.organization

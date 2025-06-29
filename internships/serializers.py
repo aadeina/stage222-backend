@@ -6,8 +6,7 @@ from .models import Internship
 
 class InternshipSerializer(serializers.ModelSerializer):
     recruiter_name = serializers.SerializerMethodField()
-    organization_name = serializers.SerializerMethodField()
-    organization_logo = serializers.SerializerMethodField()
+    organization = serializers.SerializerMethodField()
     stipend_display = serializers.SerializerMethodField()
 
     class Meta:
@@ -25,13 +24,15 @@ class InternshipSerializer(serializers.ModelSerializer):
     def get_recruiter_name(self, obj):
         return obj.recruiter.user.get_full_name()
 
-    def get_organization_name(self, obj):
-        return obj.organization.name
-
-    def get_organization_logo(self, obj):
-        if obj.organization.logo:
-            return obj.organization.logo.url
-        return None
+    def get_organization(self, obj):
+        org = obj.organization
+        return {
+            "id": org.id,
+            "name": org.name,
+            "logo": org.logo.url if org.logo else None,
+            "city": org.city,
+            "website": org.website,
+        }
 
     def get_stipend_display(self, obj):
         if obj.stipend_type == 'fixed':
