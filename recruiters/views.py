@@ -13,6 +13,8 @@ from accounts.models import User
 from accounts.permissions import IsRecruiter
 from rest_framework.permissions import IsAuthenticated
 from core.ratelimits import limit_recruiter_send_otp, limit_recruiter_verify_otp
+from internships.models import Internship
+from internships.serializers import InternshipSerializer
 
 class RecruiterMeView(APIView):
     permission_classes = [IsAuthenticated, IsRecruiter]
@@ -114,14 +116,11 @@ class VerifyRecruiterOTPView(APIView):
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# ✅ NEW: RecruiterOnboardingView
-
 class RecruiterOnboardingView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsRecruiter]
 
     def post(self, request):
         user = request.user
-
         data = request.data.copy()
         data['user'] = str(user.id)
 
@@ -134,3 +133,41 @@ class RecruiterOnboardingView(APIView):
         serializer.save(is_onboarded=True)
 
         return Response({"message": "Recruiter onboarding complete"}, status=status.HTTP_201_CREATED)
+
+
+# ✅ Recruiter dashboard endpoint for recent opportunities
+class RecruiterDashboardOpportunitiesView(APIView):
+    permission_classes = [IsAuthenticated, IsRecruiter]
+
+    def get(self, request):
+        user = request.user
+        internships = Internship.objects.filter(recruiter=request.user.recruiter).order_by('-created_at')[:5]
+        serializer = InternshipSerializer(internships, many=True)
+        return Response(serializer.data)
+
+# ✅ Recruiter dashboard stats endpoint
+class RecruiterDashboardStatsView(APIView):
+    permission_classes = [IsAuthenticated, IsRecruiter]
+
+    def get(self, request):
+        recruiter = request.user.recruiter
+
+        total_opportunities = Internship.objects.filter(recruiter=recruiter).count()
+        total_applications = 0
+        shortlisted = 0
+        total_hires = 0
+
+        # Loop through related applications only if Internship exists
+        internships = Internship.objects.filter(recruiter=recruiter)
+        for internship in internships:
+            apps = internship.applications.all()
+            total_applications += apps.count()
+            shortlisted += apps.filter(shortlisted=True).count()
+            total_hires += apps.filter(status='accepted').count()
+
+        return Response({
+            "total_opportunities": total_opportunities,
+            "total_applications": total_applications,
+            "shortlisted": shortlisted,
+            "total_hires": total_hires,
+        })

@@ -1,24 +1,21 @@
-# internships/serializers.py
-
 from rest_framework import serializers
 from .models import Internship
-
 
 class InternshipSerializer(serializers.ModelSerializer):
     recruiter_name = serializers.SerializerMethodField()
     organization = serializers.SerializerMethodField()
     stipend_display = serializers.SerializerMethodField()
+    applicants_count = serializers.SerializerMethodField()  # ✅ Add this line
 
     class Meta:
         model = Internship
-        fields = '__all__'
+        fields = '__all__'  # This will now include applicants_count too
         read_only_fields = [
             'id',
             'recruiter',
             'organization',
             'created_at',
             'updated_at',
-            'status',
         ]
 
     def get_recruiter_name(self, obj):
@@ -42,6 +39,9 @@ class InternshipSerializer(serializers.ModelSerializer):
         elif obj.stipend_type == 'unpaid':
             return "Unpaid"
         return "—"
+
+    def get_applicants_count(self, obj):
+        return obj.applications.count()  # ✅ Uses related_name from Application model
 
     def validate(self, data):
         min_fixed = data.get('fixed_pay_min')
