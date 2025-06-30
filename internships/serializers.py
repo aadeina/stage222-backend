@@ -5,11 +5,11 @@ class InternshipSerializer(serializers.ModelSerializer):
     recruiter_name = serializers.SerializerMethodField()
     organization = serializers.SerializerMethodField()
     stipend_display = serializers.SerializerMethodField()
-    applicants_count = serializers.SerializerMethodField()  # ✅ Add this line
+    applicants_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Internship
-        fields = '__all__'  # This will now include applicants_count too
+        fields = '__all__'
         read_only_fields = [
             'id',
             'recruiter',
@@ -32,28 +32,38 @@ class InternshipSerializer(serializers.ModelSerializer):
         }
 
     def get_stipend_display(self, obj):
-        if obj.stipend_type == 'fixed':
-            return f"{obj.fixed_pay_min:,} – {obj.fixed_pay_max:,} MRU"
-        elif obj.stipend_type == 'range':
-            return f"{obj.fixed_pay_min:,} – {obj.fixed_pay_max:,} MRU (+ Incentives)"
+        if obj.stipend_type == 'paid':
+            if obj.negotiable:
+                return "Negotiable"
+            if obj.stipend:
+                return f"{obj.stipend:,.0f} MRU"
+            return "Paid"
         elif obj.stipend_type == 'unpaid':
             return "Unpaid"
         return "—"
 
     def get_applicants_count(self, obj):
-        return obj.applications.count()  # ✅ Uses related_name from Application model
+        return obj.applications.count()
 
-    def validate(self, data):
-        min_fixed = data.get('fixed_pay_min')
-        max_fixed = data.get('fixed_pay_max')
-        if min_fixed is not None and max_fixed is not None:
-            if min_fixed > max_fixed:
-                raise serializers.ValidationError("Fixed pay min cannot exceed max")
+def validate(self, data):
+    stipend_type = data.get('stipend_type')
+    negotiable = data.get('negotiable', False)
+    stipend = data.get('stipend')
 
-        min_incentive = data.get('incentives_min')
-        max_incentive = data.get('incentives_max')
-        if min_incentive is not None and max_incentive is not None:
-            if min_incentive > max_incentive:
-                raise serializers.ValidationError("Incentives min cannot exceed max")
+    if stipend_type == 'paid':
+        if not negotiable and stipend is None:
+            raise serializers.ValidationError({
+                "stipend": "Stipend is required unless negotiable is true."
+            })
+        if stipend is not None and stipend < 0:
+            raise serializers.ValidationError({
+                "stipend": "Stipend must be a positive amount."
+            })
 
-        return data
+    elif stipend_type == 'unpaid':
+        # Force stipend to None if unpaid
+        data['stipend'] = None
+        data['negotiable'] = False  # Optional: unpaid offers shouldn't be marked negotiable
+
+    return data
+

@@ -39,18 +39,16 @@ class Internship(BaseModel):
         choices=[('paid', 'Paid'), ('unpaid', 'Unpaid')],
         default='paid'
     )
-    stipend = models.DecimalField(max_digits=8, decimal_places=2)
-    fixed_pay_min = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
-    fixed_pay_max = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
-    incentives_min = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
-    incentives_max = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    stipend = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+
+    negotiable = models.BooleanField(default=False)  # ✅ Add this
+
 
     # 📦 Extras
     perks = models.JSONField(default=list, blank=True)
     responsibilities = models.TextField(blank=True)
     preferences = models.JSONField(default=list, blank=True)
     screening_questions = models.JSONField(default=list, blank=True)
-    alternate_phone = models.CharField(max_length=20, blank=True, null=True)
 
     # 📌 Other Metadata
     openings = models.PositiveIntegerField()
