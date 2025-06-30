@@ -20,7 +20,6 @@ MAURITANIAN_CITIES = [
     ("Zouerate", "Zouerate"),
 ]
 
-# Define the choices for employee ranges
 EMPLOYEE_RANGES = [
     ("0–1", "0–1"),
     ("2–10", "2–10"),
@@ -32,7 +31,6 @@ EMPLOYEE_RANGES = [
     ("5000+", "5000+"),
 ]
 
-# Define the choices for industries
 INDUSTRIES = [
     ("Advertising/Marketing", "Advertising/Marketing"),
     ("Agriculture/Dairy", "Agriculture/Dairy"),
@@ -70,30 +68,20 @@ class Organization(models.Model):
     is_independent = models.BooleanField(default=False)  # For practitioners
 
     about = models.TextField(max_length=500, blank=True)
-
-    # --- UPDATED: Add choices to city field ---
     city = models.CharField(max_length=100, blank=True, choices=MAURITANIAN_CITIES)
-    # --- END UPDATED ---
-
-    # --- UPDATED: Add choices to industry field ---
-    # For multiple industries, consider storing as a JSONField if Django version < 3.1
-    # or a PostgreSQL ArrayField. For simplicity with CharField, this assumes
-    # frontend will send a single selected industry or comma-separated if your custom
-    # serializer handles parsing. If only one selection is allowed, CharField with choices is good.
-    # If multiple, the serializer validation must ensure all parts are valid choices.
     industry = models.CharField(max_length=255, choices=INDUSTRIES)
-    # --- END UPDATED ---
-
-    # --- UPDATED: Add choices to employee_range field ---
     employee_range = models.CharField(max_length=50, blank=True, choices=EMPLOYEE_RANGES)
-    # --- END UPDATED ---
 
     website = models.URLField(blank=True, null=True)
     logo = models.ImageField(upload_to='organization_logos/', blank=True, null=True)
-
     license_document = models.FileField(upload_to='org_licenses/', blank=True, null=True)
-
     social_links = models.JSONField(blank=True, null=True)
+
+    # ✅ NEW fields for full UI support
+    founded_year = models.PositiveIntegerField(blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.name

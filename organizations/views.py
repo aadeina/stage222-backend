@@ -55,11 +55,14 @@ class OrganizationCreateView(generics.CreateAPIView):
 
 
 # ✏️ Recruiter-only: Update an organization
+from rest_framework.parsers import MultiPartParser, FormParser
+
 class OrganizationUpdateView(generics.UpdateAPIView):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
     permission_classes = [permissions.IsAuthenticated, IsRecruiter]
     lookup_field = 'id'
+    parser_classes = [MultiPartParser, FormParser]  # ✅ Required for file uploads
 
     def update(self, request, *args, **kwargs):
         org = self.get_object()
@@ -85,6 +88,7 @@ class OrganizationUpdateView(generics.UpdateAPIView):
             "message": "✅ Organization updated successfully.",
             "data": serializer.data
         }, status=status.HTTP_200_OK)
+
 
 
 # 🙋‍♂️ Recruiter-only: Get current user's organization

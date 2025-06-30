@@ -14,7 +14,11 @@ class OrganizationSerializer(serializers.ModelSerializer):
         model = Organization
         fields = [
             'id', 'name', 'is_independent', 'about', 'city', 'industry',
-            'employee_range', 'website', 'logo', 'license_document', 'social_links'
+            'employee_range', 'website', 'logo', 'license_document', 'social_links',
+            "founded_year",         # ✅ newly added
+            "phone_number",         # ✅ newly added
+            "email",                # ✅ newly added
+            "address",              # ✅ newly added
         ]
 
     def to_internal_value(self, data):
@@ -130,3 +134,18 @@ class OrganizationSerializer(serializers.ModelSerializer):
                 "Please complete at least one verification method (license, website, or social media)."
             )
         return data
+    
+def update(self, instance, validated_data):
+    request = self.context.get('request')
+
+    # ✅ Handle logo replacement
+    if request and request.FILES.get('logo') and instance.logo:
+        instance.logo.delete(save=False)
+
+    # ✅ Handle license document replacement
+    if request and request.FILES.get('license_document') and instance.license_document:
+        instance.license_document.delete(save=False)
+
+    return super().update(instance, validated_data)
+
+
