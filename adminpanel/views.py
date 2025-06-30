@@ -14,6 +14,7 @@ from internships.models import Internship
 from applications.models import Application
 from datetime import timedelta
 from django.utils import timezone
+from organizations.models import Organization
 
 
 class PlatformStatsView(APIView):
@@ -374,4 +375,21 @@ class AdminRejectInternshipView(APIView):
             "approval_status": internship.approval_status,
             "rejection_reason": internship.rejection_reason,
             "message": "Internship has been rejected."
+        }, status=status.HTTP_200_OK)
+
+# admin/views.py (or wherever your admin views are)
+
+class AdminToggleVerifyOrganizationView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, id):
+        org = get_object_or_404(Organization, id=id)
+        org.is_verified = not org.is_verified
+        org.save()
+
+        return Response({
+            "id": str(org.id),
+            "name": org.name,
+            "is_verified": org.is_verified,
+            "message": f"✅ Organization has been {'verified' if org.is_verified else 'unverified'}."
         }, status=status.HTTP_200_OK)

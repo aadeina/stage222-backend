@@ -19,6 +19,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "phone_number",         # ✅ newly added
             "email",                # ✅ newly added
             "address",              # ✅ newly added
+            "is_verified"
         ]
 
     def to_internal_value(self, data):

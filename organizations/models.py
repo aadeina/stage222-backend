@@ -82,6 +82,7 @@ class Organization(models.Model):
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
+    is_verified = models.BooleanField(default=False)  # ✅ Add this
 
     def __str__(self):
         return self.name
