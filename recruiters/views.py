@@ -15,7 +15,6 @@ from rest_framework.permissions import IsAuthenticated
 from core.ratelimits import limit_recruiter_send_otp, limit_recruiter_verify_otp
 from internships.models import Internship
 from internships.serializers import InternshipSerializer
-
 class RecruiterMeView(APIView):
     permission_classes = [IsAuthenticated, IsRecruiter]
 
@@ -37,15 +36,25 @@ class RecruiterMeView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request):
+        user = request.user
+
         try:
-            recruiter = request.user.recruiter
+            recruiter = user.recruiter
         except RecruiterProfile.DoesNotExist:
             return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        # ✅ Update RecruiterProfile fields
         serializer = RecruiterSerializer(recruiter, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+
+            # ✅ Update User model's first_name and last_name
+            user.first_name = request.data.get('first_name', user.first_name)
+            user.last_name = request.data.get('last_name', user.last_name)
+            user.save()
+
             return Response(serializer.data)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

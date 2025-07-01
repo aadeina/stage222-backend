@@ -7,6 +7,11 @@ from .views import (
     TopRecruitersView,
     TopSkillsView,
     ShortlistRateView,
+    AdminGrowthTrendsView,
+    AdminEngagementMetricsView,
+    AdminConversionRatesView,
+    AdminTopUsersView,
+
 
     # 👥 User Management Views
     AdminUserListView,
@@ -43,6 +48,11 @@ urlpatterns = [
     path('internships/<uuid:id>/approve/', AdminApproveInternshipView.as_view(), name='admin-approve-internship'),
     path('internships/<uuid:id>/reject/', AdminRejectInternshipView.as_view(), name='admin-reject-internship'),
     path('organizations/<uuid:id>/toggle-verify/', AdminToggleVerifyOrganizationView.as_view(), name='admin-toggle-verify-organization'),
+
+    path('analytics/growth/', AdminGrowthTrendsView.as_view()),
+    path('analytics/engagement/', AdminEngagementMetricsView.as_view()),
+    path('analytics/conversions/', AdminConversionRatesView.as_view()),
+    path('analytics/top-users/', AdminTopUsersView.as_view()),
 
 
 ]
