@@ -19,12 +19,14 @@ from .views import (
     AdminToggleActiveUserView,
     AdminDeleteUserView,
     AdminChangeUserRoleView,
+    FullUserListView,
 
     # 📝 Internship Approval Views
     AdminPendingInternshipsView,
     AdminApproveInternshipView,
     AdminRejectInternshipView,
-    AdminToggleVerifyOrganizationView
+    AdminToggleVerifyOrganizationView,
+    AdminChangePasswordView,
 )
 
 urlpatterns = [
@@ -53,6 +55,11 @@ urlpatterns = [
     path('analytics/engagement/', AdminEngagementMetricsView.as_view()),
     path('analytics/conversions/', AdminConversionRatesView.as_view()),
     path('analytics/top-users/', AdminTopUsersView.as_view()),
+
+    path('users/full/', FullUserListView.as_view(), name='admin-users-full'),
+    path("change-password/", AdminChangePasswordView.as_view(), name="admin-change-password"),
+
+
 
 
 ]

@@ -571,3 +571,49 @@ class AdminTopUsersView(APIView):
                 for r in top_recruiters
             ]
         })
+
+# adminpanel/views.py
+
+from rest_framework.generics import ListAPIView
+from rest_framework.permissions import IsAdminUser
+from accounts.models import User
+from .serializers import FullUserSerializer
+
+class FullUserListView(ListAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = FullUserSerializer
+    queryset = User.objects.all().order_by('-created_at')
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+
+from adminpanel.permissions import IsAdminRole
+
+
+class AdminChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def patch(self, request):
+        user = request.user
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+
+        if not old_password or not new_password:
+            return Response({"error": "Both old and new passwords are required."}, status=400)
+
+        if not user.check_password(old_password):
+            return Response({"error": "Old password is incorrect."}, status=400)
+
+        try:
+            validate_password(new_password, user)
+        except ValidationError as e:
+            return Response({"error": e.messages}, status=400)
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"message": "✅ Password changed successfully."}, status=200)
