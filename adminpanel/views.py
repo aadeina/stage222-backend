@@ -104,7 +104,8 @@ class PlatformStatsView(APIView):
                 "pending": applications.filter(status="pending").count(),
                 "accepted": applications.filter(status="accepted").count(),
                 "rejected": applications.filter(status="rejected").count(),
-                "shortlisted": applications.filter(shortlisted=True).count()
+                "shortlisted": applications.filter(shortlisted_at__isnull=False).count()
+
             }
         })
 
@@ -547,7 +548,7 @@ class AdminTopUsersView(APIView):
             .annotate(
                 post_count=Count("internships"),
                 total_apps=Count("internships__applications"),
-                shortlisted=Count("internships__applications", filter=Q(internships__applications__shortlisted=True))
+                shortlisted=Count("internships__applications", filter=Q(internships__applications__shortlisted_at__isnull=False))
             )
             .order_by("-total_apps")[:10]
         )

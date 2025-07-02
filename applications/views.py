@@ -2,27 +2,27 @@ from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
-from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
 from .models import Application
 from .serializers import ApplicationSerializer, ApplicationUpdateSerializer
 from accounts.permissions import IsCandidate, IsRecruiter
+from internships.models import Internship
 
 
-# ✅ Candidate applies to an internship
+
+# 🎓 Candidate applies to an internship
 class InternshipApplyView(generics.CreateAPIView):
     serializer_class = ApplicationSerializer
     permission_classes = [permissions.IsAuthenticated, IsCandidate]
 
-    def perform_create(self, serializer):
-        internship_id = self.kwargs.get("id")
-        candidate = self.request.user.candidate
-        serializer.save(candidate=candidate, internship_id=internship_id)
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"id": self.kwargs.get("id")})
+        return context
 
 
-# ✅ Recruiter lists applications for internships they posted
-# ✅ Recruiter lists applications with filter support
+# 🧠 Recruiter lists applications for internships they posted (with optional filters)
 class ApplicationListView(generics.ListAPIView):
     serializer_class = ApplicationSerializer
     permission_classes = [permissions.IsAuthenticated, IsRecruiter]
@@ -32,51 +32,60 @@ class ApplicationListView(generics.ListAPIView):
         queryset = Application.objects.filter(internship__recruiter=recruiter)
 
         # 🔍 Filter by ?shortlisted=true/false
-        shortlisted_param = self.request.query_params.get('shortlisted')
-        if shortlisted_param is not None:
-            if shortlisted_param.lower() == 'true':
-                queryset = queryset.filter(shortlisted=True)
-            elif shortlisted_param.lower() == 'false':
-                queryset = queryset.filter(shortlisted=False)
+        shortlisted = self.request.query_params.get('shortlisted')
+        if shortlisted in ['true', 'false']:
+            queryset = queryset.filter(shortlisted_at__isnull=(shortlisted == 'false'))
 
-        # 🔍 Filter by ?status=pending/accepted/rejected
-        status_param = self.request.query_params.get('status')
-        if status_param in ['pending', 'accepted', 'rejected']:
-            queryset = queryset.filter(status=status_param)
+        # 🔍 Filter by ?status=pending/accepted/rejected/shortlisted
+        status_filter = self.request.query_params.get('status')
+        if status_filter in ['pending', 'accepted', 'rejected', 'shortlisted']:
+            queryset = queryset.filter(status=status_filter)
 
         return queryset
 
 
-
-# ✅ Recruiter updates application status or shortlist
+# ✏️ Recruiter updates application status
 class ApplicationUpdateView(generics.UpdateAPIView):
     serializer_class = ApplicationUpdateSerializer
     permission_classes = [permissions.IsAuthenticated, IsRecruiter]
     lookup_field = 'id'
 
     def get_queryset(self):
-        recruiter = self.request.user.recruiter
-        return Application.objects.filter(internship__recruiter=recruiter)
+        return Application.objects.filter(internship__recruiter=self.request.user.recruiter)
 
+# ✅ Recruiter shortlists a candidate manually
 class ShortlistApplicationView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsRecruiter]
 
     def post(self, request, id):
         application = get_object_or_404(Application, id=id)
 
-        # 🚫 Check recruiter owns the internship
+        # 🔐 Check recruiter owns the internship
         if application.internship.recruiter.user != request.user:
-            raise PermissionDenied("You're not authorized to shortlist this application.")
+            raise PermissionDenied("You're not authorized to modify this application.")
 
-        # ✅ Mark as shortlisted
-        if application.shortlisted:
-            return Response({"message": "Already shortlisted."}, status=200)
+        if application.shortlisted_at:
+            return Response({"message": "Candidate already shortlisted."}, status=200)
 
-        application.shortlisted = True
-        application.shortlisted_at = timezone.now()
-        application.save()
-
+        application.mark_shortlisted()  # ✅ Uses model method
+        serializer = ApplicationSerializer(application)
         return Response({
             "message": "Candidate successfully shortlisted.",
-            "application": ApplicationSerializer(application).data
-        }, status=200)
+            "application": serializer.data
+        }, status=status.HTTP_200_OK)
+
+# 📌 View applicants for a specific internship (recruiter only)
+class InternshipApplicantsView(generics.ListAPIView):
+    serializer_class = ApplicationSerializer
+    permission_classes = [permissions.IsAuthenticated, IsRecruiter]
+
+    def get_queryset(self):
+        internship_id = self.kwargs.get('internship_id')
+        recruiter = self.request.user.recruiter
+
+        # Validate ownership
+        internship = get_object_or_404(
+            Internship, id=internship_id, recruiter=recruiter
+        )
+
+        return Application.objects.filter(internship=internship)

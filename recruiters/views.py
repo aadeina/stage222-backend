@@ -171,7 +171,8 @@ class RecruiterDashboardStatsView(APIView):
         for internship in internships:
             apps = internship.applications.all()
             total_applications += apps.count()
-            shortlisted += apps.filter(shortlisted=True).count()
+            shortlisted += apps.filter(status='shortlisted').count()
+
             total_hires += apps.filter(status='accepted').count()
 
         return Response({
