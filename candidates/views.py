@@ -140,3 +140,27 @@ class CandidateListView(generics.ListAPIView):
         if skill_name:
             qs = qs.filter(skills__name__iexact=skill_name)
         return qs
+
+# 📸 /api/candidates/me/profile-picture/ → POST Upload profile image
+class CandidateProfilePictureUploadView(APIView):
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def post(self, request):
+        try:
+            candidate = request.user.candidate
+        except CandidateProfile.DoesNotExist:
+            return Response({"detail": "Candidate profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        picture = request.FILES.get('profile_picture')
+        if not picture:
+            return Response({"detail": "No image file provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not picture.content_type.startswith("image/"):
+            return Response({"detail": "File must be an image."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if picture.size > 2 * 1024 * 1024:
+            return Response({"detail": "Image file is too large. Max size is 2MB."}, status=status.HTTP_400_BAD_REQUEST)
+
+        candidate.profile_picture = picture
+        candidate.save()
+        return Response({"detail": "Profile picture uploaded successfully."}, status=status.HTTP_200_OK)

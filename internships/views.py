@@ -1,4 +1,5 @@
 from rest_framework import generics, permissions, filters, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
@@ -22,7 +23,6 @@ class InternshipCreateView(generics.CreateAPIView):
             organization=recruiter.organization
         )
 
-
 # 🌍 Public: List only approved + open internships
 class InternshipListView(generics.ListAPIView):
     serializer_class = InternshipSerializer
@@ -36,8 +36,23 @@ class InternshipListView(generics.ListAPIView):
             status='open'
         ).order_by('-created_at')
 
+# 🔍 Public or Authenticated: View internship detail (edit/delete if recruiter)
+class InternshipDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Internship.objects.all()
+    serializer_class = InternshipSerializer
+    lookup_field = 'id'
 
-# 🔒 Recruiter-only: List their posted internships
+    def get_permissions(self):
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            return [permissions.IsAuthenticated(), IsRecruiter()]
+        return [permissions.AllowAny()]
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response({"detail": "✅ Internship deleted successfully."}, status=status.HTTP_200_OK)
+
+# 👨‍💼 Recruiter-only: View all internships posted by them
 class MyInternshipsView(generics.ListAPIView):
     serializer_class = InternshipSerializer
     permission_classes = [permissions.IsAuthenticated, IsRecruiter]
@@ -45,8 +60,7 @@ class MyInternshipsView(generics.ListAPIView):
     def get_queryset(self):
         return Internship.objects.filter(recruiter=self.request.user.recruiter)
 
-
-# 🔐 Admin-only: Approve or reject internships
+# 🛂 Admin-only: Approve or reject internship listings
 class InternshipApprovalView(generics.UpdateAPIView):
     serializer_class = InternshipSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
@@ -68,28 +82,7 @@ class InternshipApprovalView(generics.UpdateAPIView):
 
         return Response({"message": f"Internship has been {status_choice}."}, status=200)
 
-
-# 📄 Public & Recruiter: View, update, or delete internship
-class InternshipDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Internship.objects.all()
-    serializer_class = InternshipSerializer
-    lookup_field = 'id'
-
-    def get_permissions(self):
-        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
-            return [permissions.IsAuthenticated(), IsRecruiter()]
-        return [permissions.AllowAny()]
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        return Response(
-            {"detail": "✅ Internship deleted successfully."},
-            status=status.HTTP_200_OK
-        )
-
-
-# 📨 Candidate-only: Apply to internship
+# 📨 Candidate-only: Apply to an internship
 class ApplyToInternshipView(generics.CreateAPIView):
     serializer_class = ApplicationSerializer
     permission_classes = [permissions.IsAuthenticated, IsCandidate]
@@ -105,3 +98,15 @@ class ApplyToInternshipView(generics.CreateAPIView):
 
         candidate = self.request.user.candidate
         serializer.save(candidate=candidate, internship=internship)
+
+# ✅ Public: Get dynamic screening questions for a specific internship
+class ScreeningQuestionsView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, id):
+        internship = get_object_or_404(Internship, id=id)
+        return Response({
+            "internship_id": str(internship.id),
+            "title": internship.title,
+            "screening_questions": internship.screening_questions
+        }, status=status.HTTP_200_OK)

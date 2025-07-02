@@ -2,14 +2,15 @@ from rest_framework import serializers
 from .models import Application
 from internships.models import Internship
 
+
 class ApplicationSerializer(serializers.ModelSerializer):
     screening_answers = serializers.JSONField(required=False)
 
-    # 🧑‍💼 Candidate info for recruiter view
-    candidate_name = serializers.CharField(source='candidate.user.get_full_name', read_only=True)
-    candidate_email = serializers.EmailField(source='candidate.user.email', read_only=True)
-    candidate_resume = serializers.FileField(source='candidate.resume', read_only=True)
-    candidate_photo = serializers.ImageField(source='candidate.profile_picture', read_only=True)
+    # 🧑‍💼 Recruiter-facing candidate details
+    candidate_name = serializers.SerializerMethodField()
+    candidate_email = serializers.SerializerMethodField()
+    candidate_resume = serializers.SerializerMethodField()
+    candidate_photo = serializers.SerializerMethodField()
 
     class Meta:
         model = Application
@@ -20,25 +21,37 @@ class ApplicationSerializer(serializers.ModelSerializer):
             'status',
             'shortlisted_at',
             'created_at',
-            # 🧠 Extra recruiter-facing fields:
             'candidate_name',
             'candidate_email',
             'candidate_resume',
             'candidate_photo',
         ]
-        read_only_fields = [
-            'id',
-            'status',
-            'shortlisted_at',
-            'created_at',
-            'candidate_name',
-            'candidate_email',
-            'candidate_resume',
-            'candidate_photo',
-        ]
+        read_only_fields = fields
+
+    def get_candidate_name(self, obj):
+        return obj.candidate.user.get_full_name()
+
+    def get_candidate_email(self, obj):
+        return obj.candidate.user.email
+
+    def get_candidate_resume(self, obj):
+        resume = obj.candidate.resume
+        request = self.context.get('request')
+        if resume and hasattr(resume, 'url'):
+            return request.build_absolute_uri(resume.url) if request else resume.url
+        return None
+
+    def get_candidate_photo(self, obj):
+        # If you have profile_picture on candidate model
+        photo = getattr(obj.candidate, 'profile_picture', None)
+        request = self.context.get('request')
+        if photo and hasattr(photo, 'url'):
+            return request.build_absolute_uri(photo.url) if request else photo.url
+        return None
 
     def validate(self, attrs):
-        user = self.context['request'].user
+        request = self.context.get('request')
+        user = request.user
         internship_id = self.context['view'].kwargs.get("id")
 
         try:

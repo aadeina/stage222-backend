@@ -6,6 +6,7 @@ from .views import (
     InternshipApprovalView,
     InternshipDetailView,
     ApplyToInternshipView,
+    ScreeningQuestionsView,
 )
 
 urlpatterns = [
@@ -27,4 +28,7 @@ urlpatterns = [
 
     # ✅ Admin: Approve or reject internship (with reason)
     path('<uuid:id>/approve/', InternshipApprovalView.as_view(), name='internship-approve'),
+
+    # ❓ Public: Get dynamic screening questions for an internship
+    path('<uuid:id>/screening-questions/', ScreeningQuestionsView.as_view(), name='internship-screening-questions'),
 ]

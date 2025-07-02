@@ -45,25 +45,24 @@ class InternshipSerializer(serializers.ModelSerializer):
     def get_applicants_count(self, obj):
         return obj.applications.count()
 
-def validate(self, data):
-    stipend_type = data.get('stipend_type')
-    negotiable = data.get('negotiable', False)
-    stipend = data.get('stipend')
+    def validate(self, data):
+        stipend_type = data.get('stipend_type')
+        negotiable = data.get('negotiable', False)
+        stipend = data.get('stipend')
 
-    if stipend_type == 'paid':
-        if not negotiable and stipend is None:
-            raise serializers.ValidationError({
-                "stipend": "Stipend is required unless negotiable is true."
-            })
-        if stipend is not None and stipend < 0:
-            raise serializers.ValidationError({
-                "stipend": "Stipend must be a positive amount."
-            })
+        if stipend_type == 'paid':
+            if not negotiable and stipend is None:
+                raise serializers.ValidationError({
+                    "stipend": "Stipend is required unless negotiable is true."
+                })
+            if stipend is not None and stipend < 0:
+                raise serializers.ValidationError({
+                    "stipend": "Stipend must be a positive amount."
+                })
 
-    elif stipend_type == 'unpaid':
-        # Force stipend to None if unpaid
-        data['stipend'] = None
-        data['negotiable'] = False  # Optional: unpaid offers shouldn't be marked negotiable
+        elif stipend_type == 'unpaid':
+            # Unpaid internships should not carry stipend or negotiability
+            data['stipend'] = None
+            data['negotiable'] = False
 
-    return data
-
+        return data

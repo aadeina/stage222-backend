@@ -34,6 +34,10 @@ class CandidateProfile(BaseModel):  # created_at, updated_at inherited
     graduation_year = models.PositiveIntegerField(blank=True, null=True)
     degree = models.CharField(max_length=100, blank=True, null=True)
     resume = models.FileField(upload_to=resume_upload_path, null=True, blank=True)
+    profile_picture = models.ImageField(
+    upload_to='profile_pictures/', null=True, blank=True
+)
+
 
     # 🧠 New: many-to-many skills field
     skills = models.ManyToManyField(Skill, blank=True, related_name="candidates")
