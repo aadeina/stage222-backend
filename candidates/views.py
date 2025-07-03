@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import IsAdminUser
+from rest_framework.generics import UpdateAPIView
 
 from .models import CandidateProfile, Skill
 from .serializers import (
@@ -98,12 +99,17 @@ class SkillListView(generics.ListAPIView):
 
 
 # 🧠 /api/candidates/me/skills/ → Add or update skills for candidate
-class CandidateSkillUpdateView(generics.UpdateAPIView):
-    serializer_class = CandidateSkillUpdateSerializer
+class CandidateSkillUpdateView(APIView):
     permission_classes = [IsAuthenticated, IsCandidate]
 
-    def get_object(self):
-        return self.request.user.candidate
+    def post(self, request):
+        candidate = request.user.candidate
+        serializer = CandidateSkillUpdateSerializer(candidate, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail": "Skills updated successfully."})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 # 🛠️ /api/candidates/skills/add/ → Admin creates a skill
@@ -164,3 +170,42 @@ class CandidateProfilePictureUploadView(APIView):
         candidate.profile_picture = picture
         candidate.save()
         return Response({"detail": "Profile picture uploaded successfully."}, status=status.HTTP_200_OK)
+
+# 📁 /api/candidates/me/resume/ → DELETE Resume
+class CandidateResumeDeleteView(APIView):
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def delete(self, request):
+        try:
+            candidate = request.user.candidate
+            if not candidate.resume:
+                return Response({"detail": "No resume to delete."}, status=status.HTTP_400_BAD_REQUEST)
+
+            candidate.resume.delete(save=True)
+            return Response({"detail": "Resume deleted successfully."}, status=status.HTTP_200_OK)
+
+        except CandidateProfile.DoesNotExist:
+            return Response({"detail": "Candidate profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+# 🖼️ /api/candidates/me/profile-picture/ → DELETE Profile Picture
+class CandidateProfilePictureDeleteView(APIView):
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def delete(self, request):
+        try:
+            candidate = request.user.candidate
+            if not candidate.profile_picture:
+                return Response({"detail": "No profile picture to delete."}, status=status.HTTP_400_BAD_REQUEST)
+
+            candidate.profile_picture.delete(save=True)
+            return Response({"detail": "Profile picture deleted successfully."}, status=status.HTTP_200_OK)
+
+        except CandidateProfile.DoesNotExist:
+            return Response({"detail": "Candidate profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class CandidateProfileUpdateView(UpdateAPIView):
+    serializer_class = CandidateSerializer
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def get_object(self):
+        return self.request.user.candidate

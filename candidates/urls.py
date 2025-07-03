@@ -8,7 +8,11 @@ from .views import (
     SkillCreateView,
     CandidateSkillRemoveView,
     CandidateListView,
-    CandidateProfilePictureUploadView
+    CandidateProfilePictureUploadView,
+    CandidateResumeDeleteView,
+    CandidateProfilePictureDeleteView,
+    CandidateProfileUpdateView
+
 )
 
 urlpatterns = [
@@ -18,6 +22,9 @@ urlpatterns = [
     # 📄 Resume upload
     path('me/resume/', CandidateResumeUploadView.as_view(), name='upload-resume'),
     path('me/profile-picture/', CandidateProfilePictureUploadView.as_view(), name='upload-profile-picture'),
+    path('me/resume/delete/', CandidateResumeDeleteView.as_view(), name='candidate-delete-resume'),
+    path('me/profile-picture/delete/', CandidateProfilePictureDeleteView.as_view(), name='candidate-delete-picture'),
+        path('me/update/', CandidateProfileUpdateView.as_view(), name='candidate-profile-update'),
 
 
     # 🧠 Skill management

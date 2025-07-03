@@ -33,10 +33,11 @@ class CandidateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Resume must be a PDF.")
         return value
 
+
+# ✅ Updated: Accept list of skill IDs
 class CandidateSkillUpdateSerializer(serializers.ModelSerializer):
-    skills = serializers.SlugRelatedField(
+    skills = serializers.PrimaryKeyRelatedField(
         many=True,
-        slug_field='name',
         queryset=Skill.objects.all()
     )
 
