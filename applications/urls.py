@@ -4,41 +4,26 @@ from .views import (
     ApplicationListView,
     ApplicationUpdateView,
     ShortlistApplicationView,
-    InternshipApplicantsView
+    InternshipApplicantsView,
+
+    # ✅ Candidate views
+    ApplicationListForCandidateView,
+    ApplicationCountView,
+    RecentApplicationsView,
 )
 
 urlpatterns = [
-    # 🎓 Candidate applies to an internship
-    path(
-        'internships/<uuid:id>/apply/',
-        InternshipApplyView.as_view(),
-        name='application-apply'
-    ),
+    # 🎓 Candidate applies to internship
+    path('internships/<uuid:id>/apply/', InternshipApplyView.as_view(), name='internship-apply'),
 
-    # 🧠 Recruiter lists all applications to their internships
-    path(
-        'recruiter/applications/',
-        ApplicationListView.as_view(),
-        name='application-list'
-    ),
+    # 🧠 Recruiter views
+    path('recruiter/', ApplicationListView.as_view(), name='application-list'),
+    path('<uuid:id>/update/', ApplicationUpdateView.as_view(), name='application-update'),
+    path('<uuid:id>/shortlist/', ShortlistApplicationView.as_view(), name='application-shortlist'),
+    path('internships/<uuid:internship_id>/applicants/', InternshipApplicantsView.as_view(), name='internship-applicants'),
 
-    # ✏️ Recruiter updates application status (accept/reject)
-    path(
-        'recruiter/applications/<uuid:id>/update/',
-        ApplicationUpdateView.as_view(),
-        name='application-update'
-    ),
-
-    # 🌟 Recruiter shortlists a candidate
-    path(
-        'recruiter/applications/<uuid:id>/shortlist/',
-        ShortlistApplicationView.as_view(),
-        name='application-shortlist'
-    ),
-        # 👁️‍🗨️ View all applicants for one internship (used for eye icon in UI)
-    path(
-        'recruiter/internships/<uuid:internship_id>/applicants/',
-        InternshipApplicantsView.as_view(),
-        name='internship-applicants'
-    ),
+    # 🧑‍🎓 Candidate views
+    path('candidate/', ApplicationListForCandidateView.as_view(), name='candidate-applications'),
+    path('candidate/count/', ApplicationCountView.as_view(), name='candidate-applications-count'),
+    path('candidate/recent/', RecentApplicationsView.as_view(), name='candidate-recent-applications'),
 ]

@@ -12,6 +12,11 @@ class ApplicationSerializer(serializers.ModelSerializer):
     candidate_resume = serializers.SerializerMethodField()
     candidate_photo = serializers.SerializerMethodField()
 
+    # 🧑‍🎓 Candidate-facing internship/org details
+    internship_title = serializers.SerializerMethodField()
+    internship_id = serializers.SerializerMethodField()
+    organization_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Application
         fields = [
@@ -25,9 +30,13 @@ class ApplicationSerializer(serializers.ModelSerializer):
             'candidate_email',
             'candidate_resume',
             'candidate_photo',
+            'internship_title',
+            'internship_id',
+            'organization_name',
         ]
         read_only_fields = fields
 
+    # Recruiter-facing details
     def get_candidate_name(self, obj):
         return obj.candidate.user.get_full_name()
 
@@ -42,13 +51,23 @@ class ApplicationSerializer(serializers.ModelSerializer):
         return None
 
     def get_candidate_photo(self, obj):
-        # If you have profile_picture on candidate model
         photo = getattr(obj.candidate, 'profile_picture', None)
         request = self.context.get('request')
         if photo and hasattr(photo, 'url'):
             return request.build_absolute_uri(photo.url) if request else photo.url
         return None
 
+    # Candidate-facing internship/org details
+    def get_internship_title(self, obj):
+        return obj.internship.title if obj.internship else None
+
+    def get_internship_id(self, obj):
+        return str(obj.internship.id) if obj.internship else None
+
+    def get_organization_name(self, obj):
+        return obj.internship.organization.name if obj.internship and obj.internship.organization else None
+
+    # Validation for application creation
     def validate(self, attrs):
         request = self.context.get('request')
         user = request.user
@@ -78,7 +97,6 @@ class ApplicationSerializer(serializers.ModelSerializer):
             cover_letter=validated_data.get('cover_letter', ''),
             screening_answers=validated_data.get('screening_answers', {}),
         )
-
 
 class ApplicationUpdateSerializer(serializers.ModelSerializer):
     class Meta:

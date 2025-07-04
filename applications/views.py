@@ -10,7 +10,6 @@ from accounts.permissions import IsCandidate, IsRecruiter
 from internships.models import Internship
 
 
-
 # 🎓 Candidate applies to an internship
 class InternshipApplyView(generics.CreateAPIView):
     serializer_class = ApplicationSerializer
@@ -53,6 +52,7 @@ class ApplicationUpdateView(generics.UpdateAPIView):
     def get_queryset(self):
         return Application.objects.filter(internship__recruiter=self.request.user.recruiter)
 
+
 # ✅ Recruiter shortlists a candidate manually
 class ShortlistApplicationView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsRecruiter]
@@ -74,6 +74,7 @@ class ShortlistApplicationView(APIView):
             "application": serializer.data
         }, status=status.HTTP_200_OK)
 
+
 # 📌 View applicants for a specific internship (recruiter only)
 class InternshipApplicantsView(generics.ListAPIView):
     serializer_class = ApplicationSerializer
@@ -89,3 +90,36 @@ class InternshipApplicantsView(generics.ListAPIView):
         )
 
         return Application.objects.filter(internship=internship)
+
+
+# ==========================
+# 🧑‍🎓 Candidate Views Below
+# ==========================
+
+# 📄 List all applications of the candidate
+class ApplicationListForCandidateView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+
+    def get(self, request):
+        apps = Application.objects.filter(candidate=request.user.candidate).select_related('internship').order_by('-created_at')
+        serializer = ApplicationSerializer(apps, many=True)
+        return Response(serializer.data)
+
+
+# 🔢 Count of applications for the candidate
+class ApplicationCountView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+
+    def get(self, request):
+        count = Application.objects.filter(candidate=request.user.candidate).count()
+        return Response({"count": count})
+
+
+# 🕒 Most recent 5 applications
+class RecentApplicationsView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+
+    def get(self, request):
+        apps = Application.objects.filter(candidate=request.user.candidate).select_related('internship').order_by('-created_at')[:5]
+        serializer = ApplicationSerializer(apps, many=True)
+        return Response(serializer.data)
