@@ -9,5 +9,21 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ['id', 'sender', 'receiver', 'sender_email', 'receiver_email', 'body', 'internship', 'internship_title', 'is_read', 'timestamp']
+        fields = [
+            'id',
+            'sender',
+            'receiver',
+            'sender_email',
+            'receiver_email',
+            'body',
+            'internship',
+            'internship_title',
+            'is_read',
+            'timestamp'
+        ]
         read_only_fields = ['sender', 'is_read', 'timestamp']
+
+    def create(self, validated_data):
+        # Set the sender from the request context
+        validated_data['sender'] = self.context['request'].user
+        return super().create(validated_data)

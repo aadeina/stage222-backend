@@ -3,24 +3,19 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from django.db.models import Q
-from .models import Message
-from .serializers import MessageSerializer
 from django.contrib.auth import get_user_model
-from accounts.permissions import IsRecruiter 
-from applications.models import Application
-from rest_framework import generics, permissions
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from .models import Message
-from django.db.models import Max, Q, Subquery, OuterRef
-from accounts.models import User
-from .serializers import MessageSerializer
 
+from accounts.permissions import IsRecruiter
+from applications.models import Application
+from internships.models import Internship
+from .models import Message
+from .serializers import MessageSerializer
+from applications.serializers import ApplicationUpdateSerializer
 
 User = get_user_model()
 
 
-
+# ✉️ Recruiter can send message to any candidate freely
 class SendMessageView(generics.CreateAPIView):
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated, IsRecruiter]
@@ -36,20 +31,29 @@ class SendMessageView(generics.CreateAPIView):
         if receiver == sender:
             raise ValidationError("You cannot message yourself.")
 
-        # ✅ Check that receiver is shortlisted by this recruiter
-        try:
-            app = Application.objects.get(
-                candidate=receiver.candidate,
-                internship=internship,
-                internship__recruiter=sender.recruiter
-            )
-            if not app.shortlisted:
-                raise ValidationError("You can only message candidates you've shortlisted.")
-        except Application.DoesNotExist:
-            raise ValidationError("No application found between you and this candidate.")
-
+        # ✅ No shortlist check anymore
         serializer.save(sender=sender, internship=internship)
 
+
+# ✅ Automatically notify candidate when accepted
+class ApplicationUpdateView(generics.UpdateAPIView):
+    serializer_class = ApplicationUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated, IsRecruiter]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        return Application.objects.filter(internship__recruiter=self.request.user.recruiter)
+
+    def perform_update(self, serializer):
+        application = serializer.save()
+
+        if application.status == 'accepted':
+            Message.objects.create(
+                sender=self.request.user,
+                receiver=application.candidate.user,
+                internship=application.internship,
+                body=f"🎉 Congratulations! You have been accepted for the internship: {application.internship.title} at {application.internship.organization.name}."
+            )
 
 
 # 🧵 Get all messages with a specific user
@@ -66,7 +70,6 @@ class MessageThreadView(generics.ListAPIView):
         ).order_by("timestamp")
 
 
-
 # ✅ Mark a message as read
 class MarkMessageReadView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -80,17 +83,14 @@ class MarkMessageReadView(APIView):
         except Message.DoesNotExist:
             return Response({"detail": "❌ Message not found or unauthorized."}, status=404)
 
-# 📨 Inbox view - one latest message per user pair
+
+# 📬 Inbox: latest message per conversation partner
 class InboxView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         user = request.user
-
-        # Get all messages where user is involved
         all_messages = Message.objects.filter(Q(sender=user) | Q(receiver=user))
-
-        # Get the latest message per conversation partner
         latest_messages = []
         partners_seen = set()
 
@@ -102,7 +102,8 @@ class InboxView(APIView):
                     'user_email': partner.email,
                     'message': msg.body,
                     'timestamp': msg.timestamp,
-                    'is_read': msg.is_read if msg.receiver == user else True
+                    'is_read': msg.is_read if msg.receiver == user else True,
+                    'internship_title': msg.internship.title if msg.internship else None,
                 })
                 partners_seen.add(partner.id)
 
