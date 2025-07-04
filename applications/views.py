@@ -30,17 +30,20 @@ class ApplicationListView(generics.ListAPIView):
         recruiter = self.request.user.recruiter
         queryset = Application.objects.filter(internship__recruiter=recruiter)
 
-        # 🔍 Filter by ?shortlisted=true/false
-        shortlisted = self.request.query_params.get('shortlisted')
-        if shortlisted in ['true', 'false']:
-            queryset = queryset.filter(shortlisted_at__isnull=(shortlisted == 'false'))
-
-        # 🔍 Filter by ?status=pending/accepted/rejected/shortlisted
+        # ✅ Filter by status
         status_filter = self.request.query_params.get('status')
-        if status_filter in ['pending', 'accepted', 'rejected', 'shortlisted']:
+        if status_filter in ['pending', 'accepted', 'rejected']:
             queryset = queryset.filter(status=status_filter)
 
+        # ✅ Filter by shortlisted
+        shortlisted = self.request.query_params.get('shortlisted')
+        if shortlisted == 'true':
+            queryset = queryset.exclude(shortlisted_at__isnull=True)
+        elif shortlisted == 'false':
+            queryset = queryset.filter(shortlisted_at__isnull=True)
+
         return queryset
+
 
 
 # ✏️ Recruiter updates application status
